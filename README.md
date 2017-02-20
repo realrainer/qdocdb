@@ -10,6 +10,7 @@ Only Qt is required to compile
 * Indexes, but may only used on top of query,
 * Query operators $and, $or, $in, $exist, $lt, $lte, $gt, $gte, 
 * Observable queries
+* Transactions
 
 ### Example usage:
 * In main.cpp register qml type:
