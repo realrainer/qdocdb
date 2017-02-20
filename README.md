@@ -6,11 +6,11 @@ This project is not ready for production and made  'just for fun'
 Only Qt is required to compile
 
 ### Example usage:
-* In main.cpp register qml type:
+In main.cpp register qml type:
 `
 qmlRegisterType<QDocdbConnector>("com.example.qdocdb.classes", 1, 0, "QDocdbConnector");
 `
-* In qml file:
+In qml file:
 `
 import com.example.qdocdb.classes 1.0
 
@@ -28,8 +28,7 @@ QDocdbConnector {
     }
 }
 `
-* Result of query can be used as model from testCollection.value
-
+Result of query can be used as model from testCollection.value. 
 As example, see main.qml file.
 
 
