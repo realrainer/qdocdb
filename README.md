@@ -28,7 +28,10 @@ QDocdbConnector {
     }
 }
 ```
-* Result of query can be used as model from testCollection.value. 
+* Result of query can be used as model from testCollection.value.
+
+![Alt text](/qdocdb.png?raw=true "Example usage")
+
 As example, see main.qml file.
 
 
