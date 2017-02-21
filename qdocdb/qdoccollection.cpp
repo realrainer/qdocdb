@@ -16,80 +16,35 @@ QString QDocCollection::getLastError() {
     return this->lastError;
 }
 
-QJsonValue QDocCollection::getJsonValueByPath(QJsonValue jsonValue, QString path) {
-    if (path == "") {
-        return jsonValue;
-    }
-    QString firstKey = path.mid(0, path.indexOf("."));
-    QString nextPath;
-    if (path.indexOf(".") == -1) {
-        nextPath = "";
-    } else {
-        nextPath = path.mid(path.indexOf(".") + 1);
-    }
-    if (jsonValue.isObject()) {
-        QJsonValue jsonValue1 = jsonValue.toObject().value(firstKey);
-        return QDocCollection::getJsonValueByPath(jsonValue1, nextPath);
-    }
-    return QJsonValue(QJsonValue::Undefined);
-}
-
 //---
 
-QByteArray QDocCollection::constructIndexValueKey(QString indexName, QByteArray value) {
+QByteArray QDocCollection::constructIndexValueKey(QString indexName, QJsonValue jsonValue) {
     QByteArray key = QString("iv:" + indexName + ":").toLocal8Bit();
-    key.append(value);
+    key.append(QDocSerialize::marshal(jsonValue));
     return key;
 }
 
-QJsonArray QDocCollection::multiply(QJsonArray& a, QJsonArray& b) {
-    QJsonArray res;
-    for (QJsonArray::iterator ita = a.begin(); ita != a.end(); ita++) {
-        bool find = false;
-        for (QJsonArray::iterator itb = b.begin(); (itb != b.end()) && (!find); itb++) {
-            if (*itb == *ita) find = true;
-        }
-        if (find) {
-            res.append(*ita);
-        }
+QJsonValue QDocCollection::getJsonValue(QByteArray key) {
+    QByteArray valueData;
+    int r = this->kvdb->getValue(key, valueData);
+    if (r != QDocCollection::success) {
+        return QJsonValue(QJsonValue::Undefined);
     }
-    return res;
+    return QDocSerialize::unmarshal(valueData);
 }
 
-bool QDocCollection::compare(QJsonValue &a, QJsonValue& b, QString oper) {
-    if ((a.isDouble()) && (b.isDouble())) {
-        if (oper == "$gt") {
-            return a.toDouble() > b.toDouble();
-        } else
-        if (oper == "$gte") {
-            return a.toDouble() >= b.toDouble();
-        } else
-        if (oper == "$lt") {
-            return a.toDouble() < b.toDouble();
-        } else
-        if (oper == "$lte") {
-            return a.toDouble() <= b.toDouble();
-        } else {
-            return false;
-        }
+QJsonValue QDocCollection::getJsonValue(QDocKVIterator* it) {
+    QByteArray valueData = it->value();
+    return QDocSerialize::unmarshal(valueData);
+}
+
+int QDocCollection::putJsonValue(QByteArray key, QJsonValue jsonValue) {
+    int r = this->kvdb->putValue(key, QDocSerialize::marshal(jsonValue));
+    if (r != QDocKVInterface::success) {
+        this->lastError = this->kvdb->getLastError();
+        return QDocCollection::errorDatabase;
     }
-    if ((a.isString()) && (b.isString())) {
-        if (oper == "$gt") {
-            return a.toString() > b.toString();
-        } else
-        if (oper == "$gte") {
-            return a.toString() >= b.toString();
-        } else
-        if (oper == "$lt") {
-            return a.toString() < b.toString();
-        } else
-        if (oper == "$lte") {
-            return a.toString() <= b.toString();
-        } else {
-            return false;
-        }
-    }
-    return false;
+    return QDocCollection::success;
 }
 
 int QDocCollection::createIndex(QString fieldName, QString indexName) {
@@ -110,15 +65,14 @@ int QDocCollection::createIndex(QString fieldName, QString indexName) {
     return QDocCollection::success;
 }
 
-int QDocCollection::addIndexValue(QString indexName, QByteArray value, QString linkKey) {
-    QByteArray key = constructIndexValueKey(indexName, value);
-    QByteArray indexValue;
+int QDocCollection::addIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey) {
+    QByteArray key = constructIndexValueKey(indexName, jsonValue);
     QJsonArray jsonArray;
-    int r = this->kvdb->getValue(key, indexValue);
-    if (r == QDocCollection::success) {
-        QJsonValue jsonValue = QDocSerialize::unmarshal(indexValue);
-        if (jsonValue.isArray()) jsonArray = jsonValue.toArray();
+    jsonValue = this->getJsonValue(key);
+    if (jsonValue.isArray()) {
+        jsonArray = jsonValue.toArray();
     }
+
     QJsonArray::iterator it;
     for (it = jsonArray.begin(); it != jsonArray.end(); it++) {
         if (it->isString()) {
@@ -128,37 +82,30 @@ int QDocCollection::addIndexValue(QString indexName, QByteArray value, QString l
         }
     }
     jsonArray.append(QJsonValue(linkKey));
-    return this->kvdb->putValue(key, QDocSerialize::marshal(jsonArray));
+    return this->putJsonValue(key, jsonArray);
 }
 
 int QDocCollection::getIndexValueLinkKeys(QString indexName, QJsonValue jsonValue, QJsonArray& linkKeys) {
-    QByteArray indexValue = QDocSerialize::marshal(jsonValue);
-    QByteArray key = constructIndexValueKey(indexName, indexValue);
-    int r = this->kvdb->getValue(key, indexValue);
-    if (r == QDocCollection::success) {
-        QJsonValue jsonValue = QDocSerialize::unmarshal(indexValue);
-        if (jsonValue.isArray()) {
-            linkKeys = jsonValue.toArray();
-            return QDocCollection::success;
-        }
-        return QDocCollection::errorDatabase;
+    QByteArray key = constructIndexValueKey(indexName, jsonValue);
+    jsonValue = this->getJsonValue(key);
+    if (jsonValue.isArray()) {
+        linkKeys = jsonValue.toArray();
+        return QDocCollection::success;
     } else {
-        return r;
+        return QDocCollection::errorDatabase;
     }
 }
 
-int QDocCollection::removeIndexValue(QString indexName, QByteArray value, QString linkKey) {
-    QByteArray key = constructIndexValueKey(indexName, value);
-    QByteArray indexValue;
+int QDocCollection::removeIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey) {
+    QByteArray key = constructIndexValueKey(indexName, jsonValue);
     QJsonArray jsonArray;
-    int r = this->kvdb->getValue(key, indexValue);
-    if (r == QDocCollection::success) {
-        QJsonValue jsonValue = QDocSerialize::unmarshal(indexValue);
-        if (jsonValue.isArray()) jsonArray = jsonValue.toArray();
+    jsonValue = this->getJsonValue(key);
+    if (jsonValue.isArray()) {
+        jsonArray = jsonValue.toArray();
     }
     int findIndex = -1;
     for (int i = 0; i < jsonArray.size(); (i++) && (findIndex == -1)) {
-        QJsonValue jsonValue = jsonArray[i];
+        jsonValue = jsonArray[i];
         if (jsonValue.isString()) {
             if (jsonValue.toString() == linkKey) {
                 findIndex = i;
@@ -170,15 +117,15 @@ int QDocCollection::removeIndexValue(QString indexName, QByteArray value, QStrin
     }
     jsonArray.removeAt(findIndex);
     if (jsonArray.size()) {
-        return this->kvdb->putValue(key, QDocSerialize::marshal(jsonArray));
+        return this->putJsonValue(key, jsonArray);
     } else {
         return this->kvdb->deleteValue(key);
     }
 }
 
-int QDocCollection::addIndexValue(QString indexName, QByteArray value, QList<QString> linkKeyList) {
+int QDocCollection::addIndexValue(QString indexName, QJsonValue jsonValue, QList<QString> linkKeyList) {
     foreach(QString linkKey, linkKeyList) {
-        int r = this->addIndexValue(indexName, value, linkKey);
+        int r = this->addIndexValue(indexName, jsonValue, linkKey);
         if (r != QDocCollection::success) {
             return r;
         }
@@ -192,13 +139,13 @@ int QDocCollection::addJsonValueToIndex(QString indexName, QJsonValue jsonValue,
         QJsonArray jsonArray = jsonValue.toArray();
         QJsonArray::iterator it;
         for (it = jsonArray.begin(); it != jsonArray.end(); it++) {
-            r = this->addIndexValue(indexName, QDocSerialize::marshal(*it), linkKey);
+            r = this->addIndexValue(indexName, *it, linkKey);
             if (r != QDocCollection::success) {
                 return r;
             }
         }
     }
-    r = this->addIndexValue(indexName, QDocSerialize::marshal(jsonValue), linkKey);
+    r = this->addIndexValue(indexName, jsonValue, linkKey);
     if (r != QDocCollection::success) {
         return r;
     }
@@ -252,7 +199,7 @@ int QDocCollection::checkValidR(QJsonValue queryPart, QJsonValue docPart, QStrin
                 }
             } else
             if ((key == "$gt") || (key == "$gte") || (key == "$lt") || (key == "$lte")) {
-                valid1 &= QDocCollection::compare(docPart, queryValue, key);
+                valid1 &= QDocUtils::compare(docPart, queryValue, key);
             } else
             if (key == "$in") {
                 if (queryValue.isArray()) {
@@ -301,7 +248,7 @@ int QDocCollection::checkValidR(QJsonValue queryPart, QJsonValue docPart, QStrin
             } else {
                 valuePath = curPath + "." + key;
             }
-            QJsonValue docValue = QDocCollection::getJsonValueByPath(docPart, key);
+            QJsonValue docValue = QDocUtils::getJsonValueByPath(docPart, key);
 
             if (queryValue.isObject()) {
                 r = this->checkValidR(queryValue, docValue, valuePath, valid1);
@@ -349,14 +296,13 @@ int QDocCollection::insert(QJsonObject doc, QString &id, bool overwrite) {
             return QDocCollection::errorAlreadyExists;
         }
     }
-    value = QDocSerialize::marshal(QJsonValue(doc));
-    int r = this->kvdb->putValue(key, value);
-    if (r != QDocKVInterface::success) {
+    int r = this->putJsonValue(key, QJsonValue(doc));
+    if (r != QDocCollection::success) {
         return r;
     }
 
     foreach (QString fieldName, indexes.keys()) {
-        QJsonValue jsonValue = this->getJsonValueByPath(QJsonValue(doc), fieldName);
+        QJsonValue jsonValue = QDocUtils::getJsonValueByPath(QJsonValue(doc), fieldName);
         QString indexName = indexes[fieldName];
         r = this->addJsonValueToIndex(indexName, jsonValue, key);
         if (r != QDocCollection::success) {
@@ -409,36 +355,31 @@ int QDocCollection::set(QJsonObject query, QJsonArray& docs) {
 }
 
 int QDocCollection::removeByKey(QByteArray linkKey) {
-    QByteArray value;
-    int r = this->kvdb->getValue(linkKey, value);
-    if (r != QDocCollection::success) {
-        return r;
-    }
-    QJsonValue jsonValue = QDocSerialize::unmarshal(value);
+    QJsonValue jsonValue = this->getJsonValue(linkKey);
     if (!jsonValue.isObject()) {
         this->lastError = "value is not object";
         return QDocCollection::errorDatabase;
     }
     QJsonObject doc = jsonValue.toObject();
     foreach (QString fieldName, indexes.keys()) {
-        QJsonValue jsonValue = this->getJsonValueByPath(QJsonValue(doc), fieldName);
+        QJsonValue jsonValue = QDocUtils::getJsonValueByPath(QJsonValue(doc), fieldName);
         QString indexName = indexes[fieldName];
         if (jsonValue.isArray()) {
             QJsonArray jsonArray = jsonValue.toArray();
             QJsonArray::iterator it;
             for (it = jsonArray.begin(); it != jsonArray.end(); it++) {
-                r = this->removeIndexValue(indexName, QDocSerialize::marshal(*it), linkKey);
+                int r = this->removeIndexValue(indexName, *it, linkKey);
                 if (r != QDocCollection::success) {
                     return r;
                 }
             }
         }
-        r = this->removeIndexValue(indexName, QDocSerialize::marshal(jsonValue), linkKey);
+        int r = this->removeIndexValue(indexName, jsonValue, linkKey);
         if (r != QDocCollection::success) {
             return r;
         }
     }
-    r = this->kvdb->deleteValue(linkKey);
+    int r = this->kvdb->deleteValue(linkKey);
     if (r != QDocKVInterface::success) {
         return r;
     }
@@ -521,26 +462,23 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray
                 firstFind = false;
                 linkKeys = indexLinkKeys;
             } else {
-                linkKeys = multiply(linkKeys, indexLinkKeys);
+                linkKeys = QDocUtils::multiply(linkKeys, indexLinkKeys);
             }
         }
     }
     if (!firstFind) {
         for (QJsonArray::iterator it = linkKeys.begin(); it != linkKeys.end(); it++) {
             QByteArray linkKey = (*it).toString().toLocal8Bit();
-            QByteArray valueData;
-            if (this->kvdb->getValue(linkKey, valueData) == QDocKVInterface::success) {
-                QJsonValue jsonValue = QDocSerialize::unmarshal(valueData);
-                if (jsonValue.isObject()) {
-                    bool valid = true;
-                    int r = this->checkValidR(query, jsonValue, "", valid);
-                    if (r != QDocCollection::success) {
-                        return r;
-                    }
-                    if (valid) {
-                        pReply->append(jsonValue);
-                        keys.append(linkKey);
-                    }
+            QJsonValue jsonValue = this->getJsonValue(linkKey);
+            if (jsonValue.isObject()) {
+                bool valid = true;
+                int r = this->checkValidR(query, jsonValue, "", valid);
+                if (r != QDocCollection::success) {
+                    return r;
+                }
+                if (valid) {
+                    pReply->append(jsonValue);
+                    keys.append(linkKey);
                 }
             }
         }
@@ -551,8 +489,7 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray
     QDocKVIterator* it = this->kvdb->newIterator();
     for (it->seekToFirst(); it->isValid() && it->key().mid(0, 2) == "d:"; it->next()) {
         QByteArray docKey = it->key();
-        QByteArray valueData = it->value();
-        QJsonValue jsonValue = QDocSerialize::unmarshal(valueData);
+        QJsonValue jsonValue = this->getJsonValue(it);
         if (jsonValue.isObject()) {
             bool valid = true;
             int r = this->checkValidR(query, jsonValue, "", valid);
@@ -585,15 +522,10 @@ int QDocCollection::printAll() {
     QDocKVIterator* it = this->kvdb->newIterator();
     for (it->seekToFirst(); it->isValid(); it->next()) {
         QByteArray key = it->key();
-        QByteArray value = it->value();
-        if (key.mid(0, 2) == "d:") {
-            qDebug() << key << " : " << QDocSerialize::unmarshal(value) << endl;
-        } else
         if (key.mid(0, 3) == "in:") {
-            QString str = QString::fromLocal8Bit(value);
-            qDebug() << key << " : " << str << endl;
+            qDebug() << key << " : " << it->value() << endl;
         } else {
-            qDebug() << key << " : " << value << endl;
+            qDebug() << key << " : " << this->getJsonValue(it) << endl;
         }
     }
     delete it;
@@ -690,7 +622,7 @@ int QDocCollectionTransaction::createIndex(QString fieldName, QString indexName)
     }
     if (fieldName == "") return QDocCollection::success;
 
-    r = this->addIndexValue(indexName, QByteArray(), "__START_INDEX_VALUES");
+    r = this->addIndexValue(indexName, QJsonValue(QJsonValue::Undefined), "__START_INDEX_VALUES");
     if (r != QDocCollection::success) {
         return r;
     }
@@ -699,10 +631,9 @@ int QDocCollectionTransaction::createIndex(QString fieldName, QString indexName)
 
     for (it->seekToFirst(); it->isValid() && it->key().mid(0, 2) == "d:"; it->next()) {
         QString key = QString::fromLocal8Bit(it->key());
-        QByteArray valueData(it->value().data(), it->value().size());
-        QJsonValue value = QDocSerialize::unmarshal(valueData);
+        QJsonValue value = this->getJsonValue(it);
         if (value.isObject()) {
-            QJsonValue jsonValue = this->getJsonValueByPath(value, fieldName);
+            QJsonValue jsonValue = QDocUtils::getJsonValueByPath(value, fieldName);
             r = this->addJsonValueToIndex(indexName, jsonValue, key);
             if (r != QDocCollection::success) {
                 delete it;
@@ -723,15 +654,14 @@ int QDocCollectionTransaction::set(QJsonObject& query, QJsonArray& docs) {
 
     for (QJsonArray::iterator it = docs.begin(); it != docs.end(); it++) {
         if (it->isObject()) {
-            QJsonObject doc = it->toObject();
             bool valid = false;
-            int r = this->checkValidR(query, QJsonValue(doc), "", valid);
+            int r = this->checkValidR(query, *it, "", valid);
             if (r != QDocCollection::success) {
                 return r;
             }
             if (valid) {
                 QString id;
-                r = this->insert(doc, id, true);
+                r = this->insert(it->toObject(), id, true);
                 if (r != QDocCollection::success) {
                     return r;
                 }

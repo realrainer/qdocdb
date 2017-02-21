@@ -33,4 +33,11 @@ public:
     ~QDocIdGen();
 };
 
+class QDocUtils {
+public:
+    static QJsonValue getJsonValueByPath(QJsonValue jsonValue, QString path);
+    static QJsonArray multiply(QJsonArray& a, QJsonArray& b);
+    static bool compare(QJsonValue& a, QJsonValue& b, QString oper);
+};
+
 #endif // QDOCUTILS_H

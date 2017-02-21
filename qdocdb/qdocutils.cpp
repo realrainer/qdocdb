@@ -109,3 +109,72 @@ QDocIdGen::~QDocIdGen() {
 
 }
 
+//---
+
+QJsonValue QDocUtils::getJsonValueByPath(QJsonValue jsonValue, QString path) {
+    if (path == "") {
+        return jsonValue;
+    }
+    QString firstKey = path.mid(0, path.indexOf("."));
+    QString nextPath;
+    if (path.indexOf(".") == -1) {
+        nextPath = "";
+    } else {
+        nextPath = path.mid(path.indexOf(".") + 1);
+    }
+    if (jsonValue.isObject()) {
+        QJsonValue jsonValue1 = jsonValue.toObject().value(firstKey);
+        return QDocUtils::getJsonValueByPath(jsonValue1, nextPath);
+    }
+    return QJsonValue(QJsonValue::Undefined);
+}
+
+QJsonArray QDocUtils::multiply(QJsonArray& a, QJsonArray& b) {
+    QJsonArray res;
+    for (QJsonArray::iterator ita = a.begin(); ita != a.end(); ita++) {
+        bool find = false;
+        for (QJsonArray::iterator itb = b.begin(); (itb != b.end()) && (!find); itb++) {
+            if (*itb == *ita) find = true;
+        }
+        if (find) {
+            res.append(*ita);
+        }
+    }
+    return res;
+}
+
+bool QDocUtils::compare(QJsonValue &a, QJsonValue& b, QString oper) {
+    if ((a.isDouble()) && (b.isDouble())) {
+        if (oper == "$gt") {
+            return a.toDouble() > b.toDouble();
+        } else
+        if (oper == "$gte") {
+            return a.toDouble() >= b.toDouble();
+        } else
+        if (oper == "$lt") {
+            return a.toDouble() < b.toDouble();
+        } else
+        if (oper == "$lte") {
+            return a.toDouble() <= b.toDouble();
+        } else {
+            return false;
+        }
+    }
+    if ((a.isString()) && (b.isString())) {
+        if (oper == "$gt") {
+            return a.toString() > b.toString();
+        } else
+        if (oper == "$gte") {
+            return a.toString() >= b.toString();
+        } else
+        if (oper == "$lt") {
+            return a.toString() < b.toString();
+        } else
+        if (oper == "$lte") {
+            return a.toString() <= b.toString();
+        } else {
+            return false;
+        }
+    }
+    return false;
+}

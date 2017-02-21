@@ -52,6 +52,9 @@ protected:
     int checkValidR(QJsonValue queryPart, QJsonValue docPart, QString curPath, bool& valid);
     int removeByKey(QByteArray linkKey);
     int insert(QJsonObject doc, QString& id, bool overwrite = false);
+    QJsonValue getJsonValue(QByteArray key);
+    QJsonValue getJsonValue(QDocKVIterator* it);
+    int putJsonValue(QByteArray key, QJsonValue jsonValue);
 
 public:
 
@@ -66,9 +69,9 @@ public:
     QString getLastError();
     QDocCollectionTransaction* newTransaction();
 
-    int addIndexValue(QString indexName, QByteArray value, QString linkKey);
-    int addIndexValue(QString indexName, QByteArray value, QList<QString> linkKeyList);
-    int removeIndexValue(QString indexName, QByteArray value, QString linkKey);
+    int addIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey);
+    int addIndexValue(QString indexName, QJsonValue jsonValue, QList<QString> linkKeyList);
+    int removeIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey);
     int addJsonValueToIndex(QString indexName, QJsonValue jsonValue, QString linkKey);
     int getIndexValueLinkKeys(QString indexName, QJsonValue jsonValue, QJsonArray& linkKeys);
 
@@ -90,10 +93,8 @@ public:
 
     QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen);
     static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen);
-    static QJsonValue getJsonValueByPath(QJsonValue jsonValue, QString path);
-    static QByteArray constructIndexValueKey(QString indexName, QByteArray value);
-    static QJsonArray multiply(QJsonArray& a, QJsonArray& b);
-    static bool compare(QJsonValue& a, QJsonValue& b, QString oper);
+    static QByteArray constructIndexValueKey(QString indexName, QJsonValue jsonValue);
+
     ~QDocCollection();
 
 signals:
