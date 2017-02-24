@@ -16,6 +16,8 @@ class QDocdbConnector : public QObject {
     QJsonArray _value;
     QDocDatabase* pDatabase;
 
+    QString lastError;
+
 public:
     Q_PROPERTY(QString database READ database WRITE setDatabase)
     Q_PROPERTY(QString collection READ collection WRITE setCollection)
@@ -32,14 +34,27 @@ public:
     void setQuery(QJsonObject);
     void setValue(QJsonArray);
 
-    Q_INVOKABLE void insert(QJsonObject);
-    Q_INVOKABLE void remove(QJsonObject);
-    Q_INVOKABLE void removeId(QString);
-    Q_INVOKABLE void removeQueryResults();
-    Q_INVOKABLE QString createIndex(QString, QString);
+    enum resultEnum {
+        success,
+        error
+    };
+
+    Q_ENUM(resultEnum);
+
+    Q_INVOKABLE resultEnum insert(QJsonObject query);
+    Q_INVOKABLE resultEnum remove(QJsonObject query);
+    Q_INVOKABLE resultEnum removeId(QString id);
+    Q_INVOKABLE resultEnum removeQueryResults();
+    Q_INVOKABLE resultEnum createIndex(QString field, QString indexName);
+
+    Q_INVOKABLE resultEnum newSnapshot(QString snapshotName);
+    Q_INVOKABLE resultEnum revertToSnapshot(QString snapshotName);
+    Q_INVOKABLE resultEnum removeSnapshot(QString snapshotName);
 
     void observe();
     void unobserve();
+
+    bool isValid();
 
     QDocdbConnector();
     ~QDocdbConnector();

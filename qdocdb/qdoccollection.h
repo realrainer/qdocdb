@@ -11,7 +11,6 @@
 #include <QByteArray>
 
 #include "qdockvinterface.h"
-
 #include "qdocutils.h"
 
 typedef struct {
@@ -22,79 +21,114 @@ typedef struct {
 } td_s_observer;
 
 class QDocCollectionTransaction;
+class QDocCollectionSnapshot;
 
 class QDocCollection : public QObject {
     Q_OBJECT
 
     bool isOpened;
     QString baseDir;
-    QDocIdGen* pIdGen;
 
-    void getIndexes();
-
+    int getLastSnapshotId(unsigned char &snapshotId);
     QList<QByteArray> findLinkKeys(QJsonObject query, QString curPath, int unionLogic);
-
-    void emitObservers();
     void emitObserver(int observerId);
 
     QDocCollection(QString collectionDir);
 
 protected:
+    int classType;
+    unsigned char snapshotId;
+
+    QDocIdGen* pIdGen;
     QDocKVInterface* kvdb;
     QString lastError;
 
-    QHash<QString, QString> indexes;
+    QHash<QString, QString> getIndexes();
 
     int nextObserverId;
     QHash<int, td_s_observer> observers;
 
-    int find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& keys);
+    inline QByteArray constructIndexValueKey(QString indexName, QByteArray valueData);
+    inline QByteArray constructIndexValueKey(QString indexName, QJsonValue jsonValue);
+    static inline QByteArray constructIndexValueStartKey(QString indexName, unsigned char snapshotId);
+
+    int getIndexValueLinkKeys(QString indexName, QJsonValue jsonValue, QList<QByteArray>& linkKeys);
+    int getValueByLinkKey(QByteArray linkKey, QJsonValue& value);
+
+    int find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& ids);
     int checkValidR(QJsonValue queryPart, QJsonValue docPart, QString curPath, bool& valid);
-    int removeByKey(QByteArray linkKey);
-    int insert(QJsonObject doc, QString& id, bool overwrite = false);
-    QJsonValue getJsonValue(QByteArray key);
-    QJsonValue getJsonValue(QDocKVIterator* it);
-    int putJsonValue(QByteArray key, QJsonValue jsonValue);
+
+    QJsonValue getJsonValue(QByteArray id);
+    QJsonValue getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isSingle);
+    QJsonValue getJsonValueByLinkKey(QByteArray linkKey);
+
+    int getSnapshotsValue(QList<QString>& snapshots);
 
 public:
-
     enum resultEnum {
         success = 0x0,
         errorQuery = 0x1,
         errorInvalidObject = 0x2,
         errorAlreadyExists = 0x3,
-        errorDatabase = 0x4
+        errorDatabase = 0x4,
+        errorSnapshotIsExists = 0x5,
+        errorType = 0x6
     };
 
+    enum classTypeEnum {
+        typeCollection = 0x0,
+        typeTransaction = 0x1,
+        typeReadOnlySnapshot = 0x2
+    };
+
+    // document iterator
+    class iterator {
+        QDocKVIterator *kvit;
+        unsigned char snapshotId;
+        QByteArray beginKey;
+        QByteArray prefix;
+        void setupPrefix();
+
+    public:
+        QByteArray key();
+        QJsonValue value();
+        QJsonValue value(unsigned char& snapshotId, bool& isSingle);
+        void seekToFirst();
+        void seek(QByteArray id);
+        void next();
+        bool isValid();
+        iterator(QDocKVIterator* kvit, unsigned char snapshotId);
+        ~iterator();
+    };
+    iterator* newIterator();
+
+    void reloadObservers();
+    void emitObservers();
+
     QString getLastError();
-    QDocCollectionTransaction* newTransaction();
-
-    int addIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey);
-    int addIndexValue(QString indexName, QJsonValue jsonValue, QList<QString> linkKeyList);
-    int removeIndexValue(QString indexName, QJsonValue jsonValue, QString linkKey);
-    int addJsonValueToIndex(QString indexName, QJsonValue jsonValue, QString linkKey);
-    int getIndexValueLinkKeys(QString indexName, QJsonValue jsonValue, QJsonArray& linkKeys);
-
-    int getValueByLinkKey(QString linkKey, QJsonValue& value);
+    QString getBaseDir();
+    QDocIdGen* getIdGen();
+    QDocKVInterface* getKVDB();
+    unsigned char getSnapshotId();
+    QHash<int, td_s_observer>* getObservers();
 
     // API
-    int set(QJsonObject query, QJsonArray& docs);
-    int remove(QJsonObject query);
-    int removeId(QString docId);
     int find(QJsonObject query, QJsonArray* pReply);
     int observe(QJsonObject query);
     int unobserve(int);
-
-    int createIndex(QString fieldName, QString indexName);
+    QDocCollectionTransaction* newTransaction();
+    int newSnapshot(QString snapshotName);
+    QDocCollectionSnapshot* getSnapshot(unsigned char snapshotId);
+    int getSnapshotId(QString snapshotName, unsigned char& snapshotId);
+    int revertToSnapshot(QString snapshotName);
+    int removeSnapshot(QString snapshotName);
     // ---
-
+    // debug
     int printAll();
-    QString getBaseDir();
 
-    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen);
     static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen);
-    static QByteArray constructIndexValueKey(QString indexName, QJsonValue jsonValue);
 
+    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, int classType);
     ~QDocCollection();
 
 signals:
@@ -102,20 +136,61 @@ signals:
 };
 
 class QDocCollectionTransaction : public QDocCollection {
+
+    QDocCollection* parentColl;
     QHash<int, td_s_observer>* baseObservers;
+
+    int addIndexValue(QString indexName, QJsonValue jsonValue, QByteArray id);
+    int addIndexValue(QString indexName, QJsonValue jsonValue, QList<QByteArray> ids);
+    int removeIndexValue(QString indexName, QJsonValue jsonValue, QByteArray linkKey);
+    int putJsonValue(QByteArray id, QJsonValue jsonValue);
 
 public:
     enum resultTransactionEnum {
         errorWriteTransaction = 0x101
     };
 
-    int set(QJsonObject& query, QJsonArray& docs);
-    int remove(QJsonObject& query);
-    int createIndex(QString fieldName, QString indexName);
-    int removeId(QString& docId);
+    int putIndexes(QHash<QString, QString>&);
+    int putSnapshotsValue(QList<QString>& snapshots);
+    int copyIndexValues(unsigned char dstSnapshotId, unsigned char srcSnapshotId);
 
+    // API
+    int set(QJsonObject& query, QJsonArray& docs);
+    int insert(QJsonObject doc, QByteArray& id, bool overwrite = false);
+    int remove(QJsonObject& query);
+    int removeById(QByteArray id);
+    int createIndex(QString fieldName, QString indexName);
     int writeTransaction();
-    QDocCollectionTransaction(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, QHash<int, td_s_observer>* observers);
+    // ---
+
+    inline QByteArray constructDocumentLinkKey(QByteArray id);
+    static inline QByteArray constructDocumentLinkKey(QByteArray id, unsigned char snapshotId);
+    inline QByteArray constructDocumentLinkKey(QString id);
+    static inline QByteArray constructDocumentStartKey(QByteArray id);
+
+    QDocCollectionTransaction(QDocCollection* pColl);
 };
+
+class QDocCollectionSnapshot : public QDocCollection {
+    QDocCollection* parentColl;
+
+public:
+    QDocCollectionSnapshot(QDocCollection* pColl, unsigned char);
+};
+
+/*
+ *  --- Documents (HH - snapshot number, min \x00, max \xFF):
+ *  d:DOCUMENT_ID:             -> empty
+ *  d:DOCUMENT_ID:\xHH         -> serialized QJsonObject
+ *  d:DOCUMENT_ID:\xHH         -> serialized QJsonObject
+ *  --- Indexes
+ *  in:                        -> serialized QHash<QString, QString> [fieldName] = indexName
+ *
+ *  iv:INDEX_NAME:\xHH:        -> empty
+ *  iv:INDEX_NAME:\xHH:VALUE   -> links to keys in serialized QList<QByteArray>[ "d:DOCUMENT_ID:\xHH", ... ]
+ *  --- Snapshots
+ *  s:                         -> list of snapshots in serialized QList<QString>
+*/
+
 
 #endif // QDOCCOLLECTION_H

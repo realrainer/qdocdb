@@ -46,40 +46,92 @@ void QDocdbConnector::setQuery(QJsonObject query) {
     }
 }
 
-void QDocdbConnector::insert(QJsonObject doc) {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        this->_value.append(QJsonValue(doc));
-        this->pDatabase->collection(this->_collection)->set(this->_query, this->_value);
+QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    this->_value.append(QJsonValue(doc));
+    QDocCollectionTransaction* tx = this->pDatabase->collection(this->_collection)->newTransaction();
+    int r = tx->set(this->_query, this->_value);
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+        delete tx;
+        return QDocdbConnector::error;
+    }
+    delete tx;
+    return QDocdbConnector::success;
 }
 
-void QDocdbConnector::remove(QJsonObject query) {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        this->pDatabase->collection(this->_collection)->remove(query);
+QDocdbConnector::resultEnum QDocdbConnector::remove(QJsonObject query) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    QDocCollectionTransaction* tx = this->pDatabase->collection(this->_collection)->newTransaction();
+    int r = tx->remove(query);
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+        delete tx;
+        return QDocdbConnector::error;
+    }
+    delete tx;
+    return QDocdbConnector::success;
 }
 
-void QDocdbConnector::removeId(QString docId) {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        this->pDatabase->collection(this->_collection)->removeId(docId);
+QDocdbConnector::resultEnum QDocdbConnector::removeId(QString docId) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    QDocCollectionTransaction* tx = this->pDatabase->collection(this->_collection)->newTransaction();
+    int r = tx->removeById(docId.toLocal8Bit());
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+        delete tx;
+        return QDocdbConnector::error;
+    }
+    delete tx;
+    return QDocdbConnector::success;
 }
 
-void QDocdbConnector::removeQueryResults() {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        this->_value = QJsonArray();
-        this->pDatabase->collection(this->_collection)->set(this->_query, this->_value);
+QDocdbConnector::resultEnum QDocdbConnector::removeQueryResults() {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    this->_value = QJsonArray();
+    QDocCollectionTransaction* tx = this->pDatabase->collection(this->_collection)->newTransaction();
+    int r = tx->set(this->_query, this->_value);
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+        delete tx;
+        return QDocdbConnector::error;
+    }
+    delete tx;
+    return QDocdbConnector::success;
 }
 
 void QDocdbConnector::setValue(QJsonArray value) {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        this->pDatabase->collection(this->_collection)->set(this->_query, value);
+    if (!this->isValid()) return;
+
+    QDocCollectionTransaction* tx = this->pDatabase->collection(this->_collection)->newTransaction();
+    int r = tx->set(this->_query, value);
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+    }
+    delete tx;
 }
 
 void QDocdbConnector::observe() {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
+    if (this->isValid()) {
         this->pDatabase->observe(this->pDatabase->collection(this->_collection), this->_query, this);
     }
 }
@@ -95,13 +147,62 @@ void QDocdbConnector::observeQueryChanged(QJsonArray& reply) {
     emit this->valueChanged();
 }
 
-QString QDocdbConnector::createIndex(QString fieldName, QString indexName) {
-    if ((this->pDatabase != NULL) && (this->_collection != "")) {
-        QDocCollection* pColl = this->pDatabase->collection(this->_collection);
-        pColl->createIndex(fieldName, indexName);
-        return pColl->getLastError();
+QDocdbConnector::resultEnum QDocdbConnector::createIndex(QString field, QString indexName) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    QDocCollection* pColl = this->pDatabase->collection(this->_collection);
+    QDocCollectionTransaction* tx = pColl->newTransaction();
+
+    int r = tx->createIndex(field, indexName);
+    if (r == QDocCollection::success) {
+        r = tx->writeTransaction();
     }
-    return "ERROR: Connection not setup";
+    if (r != QDocCollection::success) {
+        this->lastError = tx->getLastError();
+        delete tx;
+        return QDocdbConnector::error;
+    }
+    delete tx;
+    return QDocdbConnector::success;
+}
+
+QDocdbConnector::resultEnum QDocdbConnector::newSnapshot(QString snapshotName) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    QDocCollection* pColl = this->pDatabase->collection(this->_collection);
+    int r = pColl->newSnapshot(snapshotName);
+    if (r != QDocCollection::success) {
+        this->lastError = pColl->getLastError();
+        return QDocdbConnector::error;
+    }
+    return QDocdbConnector::success;
+}
+
+QDocdbConnector::resultEnum QDocdbConnector::revertToSnapshot(QString snapshotName) {
+    if (!this->isValid()) return QDocdbConnector::error;
+
+    QDocCollection* pColl = this->pDatabase->collection(this->_collection);
+    int r = pColl->revertToSnapshot(snapshotName);
+    if (r != QDocCollection::success) {
+        this->lastError = pColl->getLastError();
+        return QDocdbConnector::error;
+    }
+    return QDocdbConnector::success;
+}
+
+QDocdbConnector::resultEnum QDocdbConnector::removeSnapshot(QString snapshotName) {
+    if (!this->isValid()) return QDocdbConnector::error;
+    QDocCollection* pColl = this->pDatabase->collection(this->_collection);
+    int r = pColl->removeSnapshot(snapshotName);
+    if (r != QDocCollection::success) {
+        this->lastError = pColl->getLastError();
+        return QDocdbConnector::error;
+    }
+    return QDocdbConnector::success;
+}
+
+bool QDocdbConnector::isValid() {
+    return ((this->pDatabase != NULL) && (this->_collection != ""));
 }
 
 QDocdbConnector::QDocdbConnector() {

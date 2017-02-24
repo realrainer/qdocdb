@@ -19,7 +19,8 @@ ApplicationWindow {
             "name": {
                 "$exists": true
             },
-            "properties.age": { "$gte": parseInt(ageQueryTextField.text) }
+            "properties.age": { "$gte": parseInt(ageQueryTextField.text) },
+            "properties.gender": "male"
         }
     }
     QDocdbConnector {
@@ -29,7 +30,8 @@ ApplicationWindow {
         query: { }
     }
     Component.onCompleted: {
-        coll1.createIndex("name", "IDX_NAME")
+        coll1.createIndex("name", "IDX_NAME");
+        coll1.createIndex("properties.gender", "IDX_GENDER");
     }
 
     Flickable {
@@ -56,7 +58,7 @@ ApplicationWindow {
                             property string checkedDocId
                             model: coll2.value
                             delegate: RadioButton {
-                                text: modelData.name + ", age: " + modelData.properties.age
+                                text: modelData.name + ", " + modelData.properties.gender + ", age: " + modelData.properties.age
                                 onCheckedChanged: {
                                     if (checked) {
                                         dbContentRepeater.checkedDocId = modelData._id;
@@ -90,6 +92,26 @@ ApplicationWindow {
                     }
                 }
                 RowLayout {
+                    Button {
+                        text: "NEW SNAP"
+                        onClicked: {
+                            coll2.newSnapshot("test_snapshot");
+                        }
+                    }
+                    Button {
+                        text: "REVERT SNAP"
+                        onClicked: {
+                            coll2.revertToSnapshot("test_snapshot");
+                        }
+                    }
+                    Button {
+                        text: "REMOVE SNAP"
+                        onClicked: {
+                            coll2.removeSnapshot("test_snapshot");
+                        }
+                    }
+                }
+                RowLayout {
                     Label {
                         text: "Query: age >= "
                         font.pixelSize: 14
@@ -98,6 +120,11 @@ ApplicationWindow {
                     TextField {
                         id: ageQueryTextField
                         text: "30"
+                    }
+                    Label {
+                        text: " and gender=male"
+                        font.pixelSize: 14
+                        font.italic: true
                     }
                 }
                 Label {
@@ -110,7 +137,7 @@ ApplicationWindow {
                         Repeater {
                             model: coll1.value
                             delegate: Label {
-                                text: modelData.name + ", age: " + modelData.properties.age
+                                text: modelData.name + ", " + modelData.properties.gender + ", age: " + modelData.properties.age
                             }
                         }
                     }
@@ -122,7 +149,7 @@ ApplicationWindow {
                     font.italic: true
                 }
                 GridLayout {
-                    columns: 2
+                    columns: 4
                     Label { text: "Name: " }
                     TextField {
                         id: nameTextField
@@ -130,6 +157,11 @@ ApplicationWindow {
                     Label { text: "Age: " }
                     TextField {
                         id: ageTextField
+                    }
+                    Label { text: "Gender:" }
+                    ComboBox {
+                        id: genderComboBox
+                        model: [ "male", "female" ]
                     }
                 }
                 RowLayout {
@@ -144,7 +176,8 @@ ApplicationWindow {
                                     coll2.insert({
                                         "name": nameTextField.text,
                                         "properties": {
-                                            "age": parseInt(ageTextField.text)
+                                            "age": parseInt(ageTextField.text),
+                                            "gender": genderComboBox.currentText
                                         }
                                     });
                                 }

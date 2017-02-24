@@ -87,14 +87,74 @@ QJsonValue QDocSerialize::unmarshal(QByteArray& bytes) {
     return QJsonValue();
 }
 
+QByteArray QDocSerialize::marshalIndexes(QHash<QString, QString> value) {
+    QByteArray bytes;
+    bytes.append(char(QDocSerialize::typeIndexes));
+    bytes.append('\x0');
+    QByteArray valueData;
+    QDataStream ds(&valueData, QIODevice::WriteOnly);
+    ds << value;
+    bytes.append(valueData);
+    return bytes;
+}
+
+QHash<QString, QString> QDocSerialize::unmarshalIndexes(QByteArray &bytes) {
+    QHash<QString, QString> value;
+    if ((bytes.size() < 2) || (bytes[0] != char(QDocSerialize::typeIndexes))) return value;
+    QByteArray valueData = bytes.mid(2);
+    QDataStream ds(&valueData, QIODevice::ReadOnly);
+    ds >> value;
+    return value;
+}
+
+QByteArray QDocSerialize::marshalIndexValue(QList<QByteArray> value) {
+    QByteArray bytes;
+    bytes.append(char(QDocSerialize::typeIndexValue));
+    bytes.append('\x0');
+    QByteArray valueData;
+    QDataStream ds(&valueData, QIODevice::WriteOnly);
+    ds << value;
+    bytes.append(valueData);
+    return bytes;
+}
+
+QList<QByteArray> QDocSerialize::unmarshalIndexValue(QByteArray &bytes) {
+    QList<QByteArray> value;
+    if ((bytes.size() < 2) || (bytes[0] != char(QDocSerialize::typeIndexValue))) return value;
+    QByteArray valueData = bytes.mid(2);
+    QDataStream ds(&valueData, QIODevice::ReadOnly);
+    ds >> value;
+    return value;
+}
+
+QByteArray QDocSerialize::marshalSnapshotsValue(QList<QString> value) {
+    QByteArray bytes;
+    bytes.append(char(QDocSerialize::typeSnapshotsValue));
+    bytes.append('\x0');
+    QByteArray valueData;
+    QDataStream ds(&valueData, QIODevice::WriteOnly);
+    ds << value;
+    bytes.append(valueData);
+    return bytes;
+}
+
+QList<QString> QDocSerialize::unmarshalSnapshotsValue(QByteArray &bytes) {
+    QList<QString> value;
+    if ((bytes.size() < 2) || (bytes[0] != char(QDocSerialize::typeSnapshotsValue))) return value;
+    QByteArray valueData = bytes.mid(2);
+    QDataStream ds(&valueData, QIODevice::ReadOnly);
+    ds >> value;
+    return value;
+}
+
 //---
 
-QString QDocIdGen::getId() {
-    QString id;
+QByteArray QDocIdGen::getId() {
+    QByteArray id;
     this->counter++;
     unsigned int tstamp = QDateTime::currentSecsSinceEpoch() & 0xFFFFFFFF;
-    id = QString::number(tstamp, 16);
-    id += QString::number(this->counter, 16);
+    id = QByteArray::number(tstamp, 16);
+    id.append(QByteArray::number(this->counter, 16));
     return id;
 }
 
@@ -129,18 +189,13 @@ QJsonValue QDocUtils::getJsonValueByPath(QJsonValue jsonValue, QString path) {
     return QJsonValue(QJsonValue::Undefined);
 }
 
-QJsonArray QDocUtils::multiply(QJsonArray& a, QJsonArray& b) {
-    QJsonArray res;
-    for (QJsonArray::iterator ita = a.begin(); ita != a.end(); ita++) {
-        bool find = false;
-        for (QJsonArray::iterator itb = b.begin(); (itb != b.end()) && (!find); itb++) {
-            if (*itb == *ita) find = true;
-        }
-        if (find) {
-            res.append(*ita);
+QList<QByteArray> QDocUtils::multiply(QList<QByteArray> a, QList<QByteArray>& b) {
+    for (QList<QByteArray>::iterator ita = a.begin(); ita != a.end(); ita++) {
+        if (!b.contains(*ita)) {
+            a.erase(ita);
         }
     }
-    return res;
+    return a;
 }
 
 bool QDocUtils::compare(QJsonValue &a, QJsonValue& b, QString oper) {
