@@ -11,6 +11,7 @@ Only Qt is required to compile
 * Query operators $and, $or, $in, $exist, $lt, $lte, $gt, $gte, 
 * Observable queries
 * Transactions
+* Read-only snapshots
 
 ### Example usage:
 * In main.cpp register qml type:
@@ -31,12 +32,41 @@ QDocdbConnector {
         },
         "properties.age": {
             "$gte": 30
-        }
+        },
+        "properties.gender": "male"
     }
 }
+
 ```
 * Result of query is observable and can be used as model from testCollection.value.
 
 ![Alt text](/qdocdb.png?raw=true "Example usage")
 
 As example, see main.qml file.
+
+#### Other examples:
+
+* Insert document:
+```
+testCollection.insert({
+    "name": "John",
+    "properties": {
+        "age": 34,
+        "gender": "male"
+    }
+});
+```
+* Remove document:
+```
+testCollection.remove({
+    "name": "John"
+});
+```
+* Create index:
+```
+testCollection.createIndex("name", "IDX_NAME");
+```
+* Create new snapshot:
+```
+testCollection.newSnapshot("test_snapshot");
+```
