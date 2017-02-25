@@ -103,6 +103,10 @@ QString QDocCollection::getLastError() {
 
 //---
 
+QDocCollection::classTypeEnum QDocCollection::getClassType() {
+    return this->classType;
+}
+
 QHash<QString, QString> QDocCollection::getIndexes() {
     QByteArray key = "in:";
     QByteArray indexesData;
@@ -265,6 +269,14 @@ int QDocCollection::checkValidR(QJsonValue queryPart, QJsonValue docPart, QStrin
                         valid1 &= valid2;
                     }
                 } else return QDocCollection::errorQuery;
+            } else
+            if (key == "$not") {
+                valid1 = true;
+                r = this->checkValidR(queryValue, docPart, curPath, valid1);
+                if (r != QDocCollection::success) {
+                    return r;
+                }
+                valid1 = !valid1;
             } else {
                 return QDocCollection::errorQuery;
             }
@@ -372,6 +384,17 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply) {
     if (r != QDocCollection::success) {
         return r;
     }
+    return QDocCollection::success;
+}
+
+int QDocCollection::count(QJsonObject query, int &replyCount) {
+    QList<QByteArray> ids;
+    QJsonArray reply;
+    int r = this->find(query, &reply, ids);
+    if (r != QDocCollection::success) {
+        return r;
+    }
+    replyCount = ids.size();
     return QDocCollection::success;
 }
 
@@ -484,8 +507,10 @@ int QDocCollection::getSnapshotId(QString snapshotName, unsigned char& snapshotI
     return QDocCollection::errorInvalidObject;
 }
 
-QDocCollectionSnapshot* QDocCollection::getSnapshot(unsigned char snapshotId) {
+QDocCollectionSnapshot* QDocCollection::getSnapshot(QString snapshotName) {
     if (classType != QDocCollection::typeCollection) return NULL;
+    unsigned char snapshotId;
+    this->getSnapshotId(snapshotName, snapshotId);
     return new QDocCollectionSnapshot(this, snapshotId);
 }
 
@@ -715,7 +740,7 @@ QDocCollection::QDocCollection(QString collectionDir) {
     //this->printAll();
 }
 
-QDocCollection::QDocCollection(QDocKVInterface *kvdb, QString collectionDir, QDocIdGen *pIdGen, int classType) {
+QDocCollection::QDocCollection(QDocKVInterface *kvdb, QString collectionDir, QDocIdGen *pIdGen, classTypeEnum classType) {
     isOpened = false;
     this->classType = classType;
     this->baseDir = collectionDir;

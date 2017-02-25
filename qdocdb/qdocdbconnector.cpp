@@ -46,6 +46,22 @@ void QDocdbConnector::setQuery(QJsonObject query) {
     }
 }
 
+QDocdbConnector::resultEnum QDocdbConnector::find(QJsonObject query, QJsonArray& reply, QString snapshot) {
+    if (!this->isValid()) return QDocdbConnector::error;
+    QDocCollection* pColl;
+    if (snapshot == "__CURRENT") {
+        pColl = this->pDatabase->collection(this->_collection);
+    } else {
+        pColl = this->pDatabase->collection(this->_collection)->getSnapshot(snapshot);
+    }
+    int r = pColl->find(query, &reply);
+    if (pColl->getClassType() == QDocCollection::typeReadOnlySnapshot) delete pColl;
+    if (r != QDocCollection::success) {
+        return QDocdbConnector::error;
+    }
+    return QDocdbConnector::success;
+}
+
 QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc) {
     if (!this->isValid()) return QDocdbConnector::error;
 

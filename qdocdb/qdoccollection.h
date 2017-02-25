@@ -33,10 +33,17 @@ class QDocCollection : public QObject {
     QList<QByteArray> findLinkKeys(QJsonObject query, QString curPath, int unionLogic);
     void emitObserver(int observerId);
 
-    QDocCollection(QString collectionDir);
+    QDocCollection(QString collectionDir);    
+
+public:
+    enum classTypeEnum {
+        typeCollection = 0x0,
+        typeTransaction = 0x1,
+        typeReadOnlySnapshot = 0x2
+    };
 
 protected:
-    int classType;
+    classTypeEnum classType;
     unsigned char snapshotId;
 
     QDocIdGen* pIdGen;
@@ -75,12 +82,6 @@ public:
         errorType = 0x6
     };
 
-    enum classTypeEnum {
-        typeCollection = 0x0,
-        typeTransaction = 0x1,
-        typeReadOnlySnapshot = 0x2
-    };
-
     // document iterator
     class iterator {
         QDocKVIterator *kvit;
@@ -110,15 +111,17 @@ public:
     QDocIdGen* getIdGen();
     QDocKVInterface* getKVDB();
     unsigned char getSnapshotId();
+    QDocCollection::classTypeEnum getClassType();
     QHash<int, td_s_observer>* getObservers();
 
     // API
     int find(QJsonObject query, QJsonArray* pReply);
+    int count(QJsonObject query, int& replyCount);
     int observe(QJsonObject query);
     int unobserve(int);
     QDocCollectionTransaction* newTransaction();
     int newSnapshot(QString snapshotName);
-    QDocCollectionSnapshot* getSnapshot(unsigned char snapshotId);
+    QDocCollectionSnapshot* getSnapshot(QString shapshotName);
     int getSnapshotId(QString snapshotName, unsigned char& snapshotId);
     int revertToSnapshot(QString snapshotName);
     int removeSnapshot(QString snapshotName);
@@ -128,7 +131,7 @@ public:
 
     static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen);
 
-    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, int classType);
+    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, classTypeEnum classType);
     ~QDocCollection();
 
 signals:

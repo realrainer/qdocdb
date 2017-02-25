@@ -41,15 +41,18 @@ public:
 
     Q_ENUM(resultEnum);
 
-    Q_INVOKABLE resultEnum insert(QJsonObject query);
+    Q_INVOKABLE resultEnum removeQueryResults();
+
+    Q_INVOKABLE resultEnum insert(QJsonObject doc);
     Q_INVOKABLE resultEnum remove(QJsonObject query);
     Q_INVOKABLE resultEnum removeId(QString id);
-    Q_INVOKABLE resultEnum removeQueryResults();
     Q_INVOKABLE resultEnum createIndex(QString field, QString indexName);
 
     Q_INVOKABLE resultEnum newSnapshot(QString snapshotName);
     Q_INVOKABLE resultEnum revertToSnapshot(QString snapshotName);
     Q_INVOKABLE resultEnum removeSnapshot(QString snapshotName);
+
+    Q_INVOKABLE resultEnum find(QJsonObject query, QJsonArray& reply, QString snapshot = "__CURRENT");
 
     void observe();
     void unobserve();

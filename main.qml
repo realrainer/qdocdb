@@ -20,7 +20,9 @@ ApplicationWindow {
                 "$exists": true
             },
             "properties.age": { "$gte": parseInt(ageQueryTextField.text) },
-            "properties.gender": "male"
+            "$not": {
+                "properties.gender": "male"
+            }
         }
     }
     QDocdbConnector {
@@ -122,7 +124,7 @@ ApplicationWindow {
                         text: "30"
                     }
                     Label {
-                        text: " and gender=male"
+                        text: " and gender!=male"
                         font.pixelSize: 14
                         font.italic: true
                     }

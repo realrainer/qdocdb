@@ -8,7 +8,7 @@ Only Qt is required to compile
 ### Supported:
 * Databases and collections,
 * Indexes, but may only used on top of query,
-* Query operators $and, $or, $in, $exist, $lt, $lte, $gt, $gte, 
+* Query operators $and, $or, $in, $exist, $lt, $lte, $gt, $gte, $not,
 * Observable queries
 * Transactions
 * Read-only snapshots
@@ -33,7 +33,9 @@ QDocdbConnector {
         "properties.age": {
             "$gte": 30
         },
-        "properties.gender": "male"
+        $not: {
+            "properties.gender": "male"
+        }
     }
 }
 
