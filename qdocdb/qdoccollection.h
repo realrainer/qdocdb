@@ -16,6 +16,7 @@
 typedef struct {
     int id;
     QJsonObject query;
+    QJsonObject queryOptions;
     QJsonArray reply;
     bool triggered;
 } td_s_observer;
@@ -62,7 +63,8 @@ protected:
     int getIndexValueLinkKeys(QString indexName, QJsonValue jsonValue, QList<QByteArray>& linkKeys);
     int getValueByLinkKey(QByteArray linkKey, QJsonValue& value);
 
-    int find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& ids);
+    int find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& ids, QJsonObject options = QJsonObject());
+    void applyOptions(QJsonArray* pReply, QList<QByteArray>* pIds, QJsonObject options);
     int checkValidR(QJsonValue queryPart, QJsonValue docPart, QString curPath, bool& valid);
 
     QJsonValue getJsonValue(QByteArray id);
@@ -115,9 +117,9 @@ public:
     QHash<int, td_s_observer>* getObservers();
 
     // API
-    int find(QJsonObject query, QJsonArray* pReply);
-    int count(QJsonObject query, int& replyCount);
-    int observe(QJsonObject query);
+    int find(QJsonObject query, QJsonArray* pReply, QJsonObject options = QJsonObject());
+    int count(QJsonObject query, int& replyCount, QJsonObject options = QJsonObject());
+    int observe(QJsonObject query, QJsonObject queryOptions);
     int unobserve(int);
     QDocCollectionTransaction* newTransaction();
     int newSnapshot(QString snapshotName);

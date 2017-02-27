@@ -13,6 +13,7 @@ class QDocdbConnector : public QObject {
     QString _database;
     QString _collection;
     QJsonObject _query;
+    QJsonObject _queryOptions;
     QJsonArray _value;
     QDocDatabase* pDatabase;
 
@@ -22,16 +23,19 @@ public:
     Q_PROPERTY(QString database READ database WRITE setDatabase)
     Q_PROPERTY(QString collection READ collection WRITE setCollection)
     Q_PROPERTY(QJsonObject query READ query WRITE setQuery)
+    Q_PROPERTY(QJsonObject queryOptions READ queryOptions WRITE setQueryOptions)
     Q_PROPERTY(QJsonArray value READ value WRITE setValue NOTIFY valueChanged)
 
     QString database() { return this->_database; }
     QString collection() { return this->_collection; }
     QJsonObject query() { return this->_query; }
+    QJsonObject queryOptions() { return this->_queryOptions; }
     QJsonArray value() { return this->_value; }
 
     void setDatabase(QString);
     void setCollection(QString);
     void setQuery(QJsonObject);
+    void setQueryOptions(QJsonObject);
     void setValue(QJsonArray);
 
     enum resultEnum {

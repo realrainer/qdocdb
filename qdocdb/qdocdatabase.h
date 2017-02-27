@@ -27,7 +27,7 @@ public:
     int open(QString baseDir);
     void close();
 
-    int observe(QDocCollection* pColl, QJsonObject& query, QObject* pObject);
+    int observe(QDocCollection* pColl, QJsonObject& query, QJsonObject& queryOptions, QObject* pObject);
     int unobserve(QDocCollection* pColl, QObject* pObject);
 
     QDocCollection* collection(QString collName);

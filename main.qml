@@ -24,6 +24,11 @@ ApplicationWindow {
                 "properties.gender": "male"
             }
         }
+        queryOptions: {
+            "$orderBy": {
+                "properties.age": 1
+            }
+        }
     }
     QDocdbConnector {
         id: coll2

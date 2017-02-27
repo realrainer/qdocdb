@@ -314,7 +314,7 @@ int QDocCollection::checkValidR(QJsonValue queryPart, QJsonValue docPart, QStrin
 
 //---
 
-int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& ids) {
+int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray>& ids, QJsonObject options) {
 
     ids = QList<QByteArray>();
     *pReply = QJsonArray();
@@ -375,22 +375,91 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray
         }
     }
     delete it;
+
+    this->applyOptions(pReply, &ids, options);
+
     return QDocCollection::success;
 }
 
-int QDocCollection::find(QJsonObject query, QJsonArray* pReply) {
+void QDocCollection::applyOptions(QJsonArray *pReply, QList<QByteArray> *pIds, QJsonObject options) {
+
+    if (options.contains("$orderBy")) {
+        QString orderPath;
+        bool orderUp = true;
+        QJsonObject orderBy = options["$orderBy"].toObject();
+        if (!orderBy.isEmpty()) {
+            QJsonObject::iterator it = orderBy.begin();
+            if (it.value().isDouble()) {
+                orderPath = it.key();
+                if (it.value().toInt() == 0) {
+                    orderUp = false;
+                }
+            }
+        }
+        if (!orderPath.isEmpty()) {
+            QString oper;
+            if (orderUp) oper = "$gte"; else oper = "$lte";
+            QJsonArray::iterator it = pReply->begin();
+            QList<QByteArray>::iterator itl;
+            if (pIds != NULL) itl = pIds->begin();
+            while (it != pReply->end()) {
+                QJsonArray::iterator it0 = it + 1;
+                QList<QByteArray>::iterator itl0;
+                if (pIds != NULL) itl0 = itl + 1;
+                QJsonValue value = QDocUtils::getJsonValueByPath(*it, orderPath);
+                while (it0 != pReply->end()) {
+                    QJsonValue value0 = QDocUtils::getJsonValueByPath(*it0, orderPath);
+                    if (QDocUtils::compare(value, value0, oper)) {
+                        QJsonValue v = *it;
+                        *it = *it0;
+                        *it0 = v;
+                        value = value0;
+                        if (pIds != NULL) {
+                            QByteArray bv = *itl;
+                            *itl = *itl0;
+                            *itl0 = bv;
+                        }
+                    }
+                    it0++;
+                    if (pIds != NULL) itl0++;
+                }
+                it++;
+                if (pIds != NULL) itl++;
+            }
+        }
+    }
+
+    if (options.contains("$limit")) {
+        int limit = options["$limit"].toInt();
+        QJsonArray::iterator it = pReply->begin();
+        QList<QByteArray>::iterator itl;
+        if (pIds != NULL) itl = pIds->begin();
+        int index = 0;
+        while ((it != pReply->end()) && (index < limit)) {
+            index++;
+            it++;
+            if (pIds != NULL) itl++;
+        }
+        while (it != pReply->end()) {
+            it = pReply->erase(it);
+            if (pIds != NULL) itl = pIds->erase(itl);
+        }
+    }
+}
+
+int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QJsonObject options) {
     QList<QByteArray> ids;
-    int r = this->find(query, pReply, ids);
+    int r = this->find(query, pReply, ids, options);
     if (r != QDocCollection::success) {
         return r;
     }
     return QDocCollection::success;
 }
 
-int QDocCollection::count(QJsonObject query, int &replyCount) {
+int QDocCollection::count(QJsonObject query, int &replyCount, QJsonObject options) {
     QList<QByteArray> ids;
     QJsonArray reply;
-    int r = this->find(query, &reply, ids);
+    int r = this->find(query, &reply, ids, options);
     if (r != QDocCollection::success) {
         return r;
     }
@@ -425,13 +494,14 @@ int QDocCollection::printAll() {
     return 0;
 }
 
-int QDocCollection::observe(QJsonObject query) {
+int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions) {
     int id = this->nextObserverId++;
     td_s_observer observer;
     observer.id = id;
     observer.query = query;
+    observer.queryOptions = queryOptions;
     observer.triggered = true;
-    this->find(query, &observer.reply);
+    this->find(query, &observer.reply, queryOptions);
     this->observers[id] = observer;
     this->emitObserver(id);
     return id;
@@ -976,6 +1046,7 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
                     it++;
                 }
             }
+            this->applyOptions(&this->observers[observeId].reply, NULL, this->observers[observeId].queryOptions);
             this->observers[observeId].triggered = true;
         }
     }
@@ -1107,6 +1178,7 @@ int QDocCollectionTransaction::removeById(QByteArray id) {
                 if (doc.value("_id") == it->toObject().value("_id")) {
                     reply.erase(it);
                     deleted = true;
+                    this->applyOptions(&this->observers[observeId].reply, NULL, this->observers[observeId].queryOptions);
                     this->observers[observeId].triggered = true;
                 }
                 it++;

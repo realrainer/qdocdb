@@ -46,6 +46,14 @@ void QDocdbConnector::setQuery(QJsonObject query) {
     }
 }
 
+void QDocdbConnector::setQueryOptions(QJsonObject queryOptions) {
+    if (this->_queryOptions != queryOptions) {
+        this->unobserve();
+        this->_queryOptions = queryOptions;
+        this->observe();
+    }
+}
+
 QDocdbConnector::resultEnum QDocdbConnector::find(QJsonObject query, QJsonArray& reply, QString snapshot) {
     if (!this->isValid()) return QDocdbConnector::error;
     QDocCollection* pColl;
@@ -148,7 +156,7 @@ void QDocdbConnector::setValue(QJsonArray value) {
 
 void QDocdbConnector::observe() {
     if (this->isValid()) {
-        this->pDatabase->observe(this->pDatabase->collection(this->_collection), this->_query, this);
+        this->pDatabase->observe(this->pDatabase->collection(this->_collection), this->_query, this->_queryOptions, this);
     }
 }
 

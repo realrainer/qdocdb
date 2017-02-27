@@ -9,6 +9,7 @@ Only Qt is required to compile
 * Databases and collections,
 * Indexes, but may only used on top of query,
 * Query operators $and, $or, $in, $exist, $lt, $lte, $gt, $gte, $not,
+* Query options $orderBy, $limit,
 * Observable queries
 * Transactions
 * Read-only snapshots
@@ -36,9 +37,14 @@ QDocdbConnector {
         $not: {
             "properties.gender": "male"
         }
+    },
+    queryOptions: {
+        "$orderBy": {
+            "name": 1
+        },
+        $limit: 10
     }
 }
-
 ```
 * Result of query is observable and can be used as model from testCollection.value.
 

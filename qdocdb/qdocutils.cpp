@@ -185,6 +185,14 @@ QJsonValue QDocUtils::getJsonValueByPath(QJsonValue jsonValue, QString path) {
     if (jsonValue.isObject()) {
         QJsonValue jsonValue1 = jsonValue.toObject().value(firstKey);
         return QDocUtils::getJsonValueByPath(jsonValue1, nextPath);
+    } else
+    if (jsonValue.isArray()) {
+        bool ok = false;
+        int index = firstKey.toInt(&ok, 10);
+        if (ok) {
+            QJsonValue jsonValue1 = jsonValue.toArray().at(index);
+            return QDocUtils::getJsonValueByPath(jsonValue1, nextPath);
+        }
     }
     return QJsonValue(QJsonValue::Undefined);
 }

@@ -38,8 +38,8 @@ QDocCollection* QDocDatabase::collection(QString collName) {
     return pColl;
 }
 
-int QDocDatabase::observe(QDocCollection *pColl, QJsonObject &query, QObject* pObject) {
-    int observeId = pColl->observe(query);
+int QDocDatabase::observe(QDocCollection *pColl, QJsonObject &query, QJsonObject& queryOptions, QObject* pObject) {
+    int observeId = pColl->observe(query, queryOptions);
     if (observeId != -1) {
         this->observeHash[observeId] = pObject;
         return QDocDatabase::errorDatabase;
