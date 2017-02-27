@@ -1,7 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
-#include "qdocdb/qdocdbconnector.h"
+#include "../qdocdb/qdocdbconnector.h"
 
 int main(int argc, char *argv[])
 {

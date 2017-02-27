@@ -3,7 +3,7 @@ Leveldb based embedded json document database released in Qt. May be used in QML
 This project is not ready for production and made  'just for fun'
 
 ### Required:
-Only Qt is required to compile
+Qt 5.8
 
 ### Supported:
 * Databases and collections,
@@ -15,6 +15,14 @@ Only Qt is required to compile
 * Read-only snapshots
 
 ### Example usage:
+* Create directory qdocdb in your qml project and clone this repository to created directory:
+```
+git clone https://github.com/realrainer/qdocdb/
+```
+* Include qdocdb.pri in your .pro file:
+```
+include(qdocdb/qdocdb.pri)
+```
 * In main.cpp register qml type:
 ```
 qmlRegisterType<QDocdbConnector>("com.example.qdocdb.classes", 1, 0, "QDocdbConnector");
@@ -50,7 +58,7 @@ QDocdbConnector {
 
 ![Alt text](/qdocdb.png?raw=true "Example usage")
 
-As example, see main.qml file.
+As example, see example/main.qml file.
 
 #### Other examples:
 

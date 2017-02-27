@@ -12,7 +12,6 @@ SOURCES += \
     $$PWD/qdockvinterface.cpp
 
 HEADERS += \
-    $$SOURCE_DIR/qdocerrors.h \
     $$SOURCE_DIR/qdoccollection.h \
     $$SOURCE_DIR/qdocdatabase.h \
     $$SOURCE_DIR/qdocutils.h \
