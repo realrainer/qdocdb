@@ -1,6 +1,7 @@
 # qdocdb
 Leveldb based embedded json document database released in Qt. May be used in QML projects on any platforms (Windows, Linux, Android ...)
-This project is not ready for production and made  'just for fun'
+This project is not ready for production and made  'just for fun'.
+Leveldb qt project was get from https://github.com/paulovap/qtleveldb/tree/master/src/3rdparty/leveldb
 
 ### Required:
 Qt 5.8
@@ -82,7 +83,11 @@ testCollection.remove({
 ```
 testCollection.createIndex("name", "IDX_NAME");
 ```
-* Create new snapshot:
+* Snapshot functions:
 ```
 testCollection.newSnapshot("test_snapshot");
+testCollection.revertToSnapshot("test_snapshot");
+or
+testCollection.removeSnapshot("test_snapshot");
 ```
+* 

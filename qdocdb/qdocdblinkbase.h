@@ -1,0 +1,4 @@
+#ifndef QDOCDBLINKBASE_H
+#define QDOCDBLINKBASE_H
+
+#endif // QDOCDBLINKBASE_H

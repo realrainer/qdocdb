@@ -1,0 +1,4 @@
+#ifndef QDOCDBSERVER_H
+#define QDOCDBSERVER_H
+
+#endif // QDOCDBSERVER_H
