@@ -1,6 +1,7 @@
 # qdocdb
 Leveldb based embedded json document database released in Qt. May be used in QML projects on any platforms (Windows, Linux, Android ...)
-This project is not ready for production and made  'just for fun']
+This project is not ready for production and made  'just for fun'.
+
 Leveldb qt project was get from https://github.com/paulovap/qtleveldb/tree/master/src/3rdparty/leveldb
 
 ### Required:
