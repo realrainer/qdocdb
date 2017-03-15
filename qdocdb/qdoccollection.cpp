@@ -8,6 +8,7 @@
 
 #include "qdocutils.h"
 #include "qdockvleveldb.h"
+#include "qdockvmap.h"
 #include "qdoccollection.h"
 
 QDocCollection::iterator::iterator(QDocKVIterator* kvit, unsigned char snapshotId) {
@@ -135,18 +136,24 @@ QJsonValue QDocCollection::getJsonValue(QByteArray id) {
     QDocCollection::iterator* it = this->newIterator();
     it->seek(id);
     if (!it->isValid()) {
+        delete it;
         return QJsonValue(QJsonValue::Undefined);
     }
-    return it->value();
+    QJsonValue value = it->value();
+    delete it;
+    return value;
 }
 
 QJsonValue QDocCollection::getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isSingle) {
     QDocCollection::iterator* it = this->newIterator();
     it->seek(id);
     if (!it->isValid()) {
+        delete it;
         return QJsonValue(QJsonValue::Undefined);
     }
-    return it->value(snapshotId, isSingle);
+    QJsonValue value = it->value(snapshotId, isSingle);
+    delete it;
+    return value;
 }
 
 QJsonValue QDocCollection::getJsonValueByLinkKey(QByteArray linkKey) {
@@ -753,8 +760,8 @@ int QDocCollection::removeSnapshot(QString snapshotName) {
     return r;
 }
 
-QDocCollection* QDocCollection::open(QString collectionDir, QDocIdGen *pIdGen) {
-    QDocCollection* pColl = new QDocCollection(collectionDir);
+QDocCollection* QDocCollection::open(QString collectionDir, QDocIdGen *pIdGen, bool inMemory) {
+    QDocCollection* pColl = new QDocCollection(collectionDir, inMemory);
     if (!pColl->isOpened) {
         delete pColl;
         return NULL;
@@ -785,12 +792,16 @@ unsigned char QDocCollection::getSnapshotId() {
     return this->snapshotId;
 }
 
-QDocCollection::QDocCollection(QString collectionDir) {
+QDocCollection::QDocCollection(QString collectionDir, bool inMemory) {
     isOpened = false;
     this->classType = QDocCollection::typeCollection;
     this->baseDir = collectionDir;
     this->nextObserverId = 0;
-    this->kvdb = new QDocKVLevelDB("file://" + collectionDir);
+    if (inMemory) {
+        this->kvdb = new QDocKVMap("map://" + collectionDir);
+    } else {
+        this->kvdb = new QDocKVLevelDB("file://" + collectionDir);
+    }
     isOpened = this->kvdb->isValid();
     if (isOpened) {
         QDocCollectionTransaction* tx = this->newTransaction();

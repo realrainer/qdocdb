@@ -24,18 +24,18 @@ git clone https://github.com/realrainer/qdocdb/
 ```
 include(qdocdb/qdocdb.pri)
 ```
-* In main.cpp register qml type:
+* In main.cpp register qml type and start server with name "local":
 ```
 qmlRegisterType<QDocdbConnector>("com.example.qdocdb.classes", 1, 0, "QDocdbConnector");
+QDocdbServer* dbserver = new QDocdbServer("local");
 ```
-* In qml file:
+* In qml file define connector to server "local":
 ```
 import com.example.qdocdb.classes 1.0
 
 QDocdbConnector {
     id: testCollection
-    database: "testdb"
-    collection: "test"
+    url: "qdocdb://local/testdb?collection=test"
     query: {
         "name": {
             "$exists": true
@@ -90,4 +90,3 @@ testCollection.revertToSnapshot("test_snapshot");
 or
 testCollection.removeSnapshot("test_snapshot");
 ```
-* 

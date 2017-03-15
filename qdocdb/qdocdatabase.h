@@ -16,7 +16,6 @@ class QDocDatabase : public QObject {
     QString baseDir;
     QList<QDocCollection*> collList;
     QDocIdGen idGen;
-    QHash<int, QObject*> observeHash;
 
 public:
     enum resultEnum {
@@ -27,16 +26,10 @@ public:
     int open(QString baseDir);
     void close();
 
-    int observe(QDocCollection* pColl, QJsonObject& query, QJsonObject& queryOptions, QObject* pObject);
-    int unobserve(QDocCollection* pColl, QObject* pObject);
-
-    QDocCollection* collection(QString collName);
+    QDocCollection* collection(QString collName, bool inMemory = false);
 
     QDocDatabase();
     ~QDocDatabase();
-public slots:
-    void observeQueryChanged(int, QJsonArray&);
-
 };
 
 #endif // QDOCDATABASE_H

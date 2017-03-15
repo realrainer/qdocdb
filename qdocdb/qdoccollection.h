@@ -34,7 +34,7 @@ class QDocCollection : public QObject {
     QList<QByteArray> findLinkKeys(QJsonObject query, QString curPath, int unionLogic);
     void emitObserver(int observerId);
 
-    QDocCollection(QString collectionDir);    
+    QDocCollection(QString collectionDir, bool inMemory = false);
 
 public:
     enum classTypeEnum {
@@ -131,7 +131,7 @@ public:
     // debug
     int printAll();
 
-    static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen);
+    static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen, bool inMemory = false);
 
     QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, classTypeEnum classType);
     ~QDocCollection();

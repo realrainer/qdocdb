@@ -241,3 +241,4 @@ bool QDocUtils::compare(QJsonValue &a, QJsonValue& b, QString oper) {
     }
     return false;
 }
+

@@ -1,6 +1,7 @@
 #ifndef QDOCDBCONNECTOR_H
 #define QDOCDBCONNECTOR_H
 
+#include "qdocdbclient.h"
 #include "qdocdatabase.h"
 
 #include <QVariantList>
@@ -10,33 +11,37 @@
 
 class QDocdbConnector : public QObject {
     Q_OBJECT
-    QString _database;
-    QString _collection;
+    QString _url;
+    bool urlValid;
     QJsonObject _query;
     QJsonObject _queryOptions;
     QJsonArray _value;
-    QDocDatabase* pDatabase;
 
     QString lastError;
 
+    int observeId;
+
+    QDocdbClient* dbClient;
+
 public:
-    Q_PROPERTY(QString database READ database WRITE setDatabase)
-    Q_PROPERTY(QString collection READ collection WRITE setCollection)
+    Q_PROPERTY(QString url READ url WRITE setUrl)
     Q_PROPERTY(QJsonObject query READ query WRITE setQuery)
     Q_PROPERTY(QJsonObject queryOptions READ queryOptions WRITE setQueryOptions)
     Q_PROPERTY(QJsonArray value READ value WRITE setValue NOTIFY valueChanged)
+    Q_PROPERTY(QString err READ err NOTIFY errChanged)
 
-    QString database() { return this->_database; }
-    QString collection() { return this->_collection; }
+    QString url() { return this->_url; }
     QJsonObject query() { return this->_query; }
     QJsonObject queryOptions() { return this->_queryOptions; }
     QJsonArray value() { return this->_value; }
+    QString err() { return this->lastError; }
 
-    void setDatabase(QString);
-    void setCollection(QString);
+    void setUrl(QString);
     void setQuery(QJsonObject);
     void setQueryOptions(QJsonObject);
     void setValue(QJsonArray);
+
+    void setLastError(QString);
 
     enum resultEnum {
         success,
@@ -56,7 +61,7 @@ public:
     Q_INVOKABLE resultEnum revertToSnapshot(QString snapshotName);
     Q_INVOKABLE resultEnum removeSnapshot(QString snapshotName);
 
-    Q_INVOKABLE resultEnum find(QJsonObject query, QJsonArray& reply, QString snapshot = "__CURRENT");
+    Q_INVOKABLE QVariantList find(QJsonObject query, QString snapshot = "__CURRENT");
 
     void observe();
     void unobserve();
@@ -68,6 +73,7 @@ public:
 
 signals:
     void valueChanged();
+    void errChanged();
 public slots:
     void observeQueryChanged(QJsonArray&);
 };

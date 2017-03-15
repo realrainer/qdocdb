@@ -14,8 +14,8 @@ android {
 
 linux {
     DEFINES += OS_LINUX
-    QMAKE_CFLAGS += -fno-builtin-memcmp -pthread
-    QMAKE_CXXFLAGS += -fno-builtin-memcmp -pthread
+    QMAKE_CFLAGS += -Wno-unused -fno-builtin-memcmp -pthread
+    QMAKE_CXXFLAGS += -Wno-unused -fno-builtin-memcmp -pthread
     QMAKE_LFLAGS += -pthread -lrt
   }
 }

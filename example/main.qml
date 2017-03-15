@@ -13,8 +13,7 @@ ApplicationWindow {
     title: qsTr("Document database test")
     QDocdbConnector {
         id: coll1
-        database: "testdb"
-        collection: "coll1"
+        url: "qdocdb://qdocdblocal/testdb?collection=coll1"
         query: {
             "name": {
                 "$exists": true
@@ -32,8 +31,12 @@ ApplicationWindow {
     }
     QDocdbConnector {
         id: coll2
-        database: "testdb"
-        collection: "coll1"
+        url: "qdocdb://qdocdblocal/testdb?collection=coll1"
+        query: { }
+    }
+    QDocdbConnector {
+        id: coll3
+        url: "qdocdb://qdocdblocal/testdb?collection=coll3&persistent=false"
         query: { }
     }
     Component.onCompleted: {
@@ -195,6 +198,18 @@ ApplicationWindow {
 
                             }
                         }
+                    }
+                    Button {
+                        text: "Test"
+                        onClicked: {
+                            var reply = coll2.find({ "_id": { "$exists": true }});
+                            console.log(JSON.stringify(reply));
+                        }
+                    }
+                }
+                RowLayout {
+                    Label {
+                        text: coll1.err;
                     }
                 }
             }

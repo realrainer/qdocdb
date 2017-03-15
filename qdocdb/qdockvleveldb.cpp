@@ -2,6 +2,7 @@
 #include <QUrl>
 #include <QDir>
 #include <QHash>
+#include <QDebug>
 
 #include "qdockvleveldb.h"
 

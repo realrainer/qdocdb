@@ -19,7 +19,7 @@ int QDocDatabase::open(QString baseDir) {
     return QDocDatabase::success;
 }
 
-QDocCollection* QDocDatabase::collection(QString collName) {
+QDocCollection* QDocDatabase::collection(QString collName, bool inMemory) {
     QDocCollection* pColl = NULL;
     QString baseDir = this->baseDir + "/" + collName;
     QList<QDocCollection*>::iterator it;
@@ -29,39 +29,12 @@ QDocCollection* QDocDatabase::collection(QString collName) {
         }
     }
     if (pColl == NULL) {
-        pColl = QDocCollection::open(baseDir, &this->idGen);
+        pColl = QDocCollection::open(baseDir, &this->idGen, inMemory);
         if (pColl != NULL) {
-            this->collList.append(pColl);
-            connect(pColl, SIGNAL(observeQueryChanged(int, QJsonArray&)), this, SLOT(observeQueryChanged(int, QJsonArray&)), Qt::QueuedConnection);
+            this->collList.append(pColl);           
         }
     }
     return pColl;
-}
-
-int QDocDatabase::observe(QDocCollection *pColl, QJsonObject &query, QJsonObject& queryOptions, QObject* pObject) {
-    int observeId = pColl->observe(query, queryOptions);
-    if (observeId != -1) {
-        this->observeHash[observeId] = pObject;
-        return QDocDatabase::errorDatabase;
-    }
-    return QDocDatabase::success;
-}
-
-int QDocDatabase::unobserve(QDocCollection *pColl, QObject *pObject) {
-    foreach(int observeId, this->observeHash.keys()) {
-        if (this->observeHash[observeId] == pObject) {
-            pColl->unobserve(observeId);
-            this->observeHash.remove(observeId);
-        }
-    }
-    return QDocDatabase::success;
-}
-
-void QDocDatabase::observeQueryChanged(int observeId, QJsonArray& reply) {
-    if (this->observeHash.contains(observeId)) {
-        QObject* pObject = this->observeHash[observeId];
-        QMetaObject::invokeMethod(pObject, "observeQueryChanged", Q_ARG(QJsonArray, reply));
-    }
 }
 
 QDocDatabase::QDocDatabase() {
