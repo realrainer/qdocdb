@@ -51,6 +51,8 @@ public:
     void set(QString key, QVariant value);
     QVariant get(QString key);
 
+    QVariantMap& map();
+
     LinkObjectType getType();
 
     QSignalSpy* signalSpy;
@@ -84,7 +86,7 @@ const QMap<QDocdbLinkObject::LinkObjectType, QString> QDOCDB_FUNCMAP({
     { QDocdbLinkObject::typeRevertToSnapshot, "revertToSnapshot" },
     { QDocdbLinkObject::typeRemoveSnapshot, "removeSnapshot" },
     { QDocdbLinkObject::typeObserve, "observe" },
-    { QDocdbLinkObject::typeObserveReply, "observeRelpy" },
+    { QDocdbLinkObject::typeObserveReply, "observeReply" },
     { QDocdbLinkObject::typeObserveData, "observeData" },
     { QDocdbLinkObject::typeUnobserve, "unobserve" },
     { QDocdbLinkObject::typeUnknown, "unknown" }

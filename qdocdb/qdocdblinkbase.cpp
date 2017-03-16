@@ -101,6 +101,10 @@ void QDocdbLinkObject::unmarshal(QByteArray &data) {
     }
 }
 
+QVariantMap& QDocdbLinkObject::map() {
+    return this->fMap;
+}
+
 bool QDocdbLinkObject::waitForDone() {
     this->signalSpy = new QSignalSpy(this, SIGNAL(done()));
     bool ok = this->signalSpy->wait(QDocdbLinkObject::waitForDoneTimeout);

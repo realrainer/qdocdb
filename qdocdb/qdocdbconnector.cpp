@@ -40,6 +40,7 @@ void QDocdbConnector::setUrl(QString url) {
     if ((serverName.isEmpty()) || (database.isEmpty()) || (collection.isEmpty())) {
         this->setLastError("Error: Invalid url: " + url);
         this->urlValid = false;
+        emit this->validChanged();
         return;
     } else {
         this->urlValid = true;
@@ -59,6 +60,7 @@ void QDocdbConnector::setUrl(QString url) {
         }
     }
     this->observe();
+    emit this->validChanged();
 }
 
 void QDocdbConnector::setQuery(QJsonObject query) {
@@ -78,7 +80,7 @@ void QDocdbConnector::setQueryOptions(QJsonObject queryOptions) {
 }
 
 QVariantList QDocdbConnector::find(QJsonObject query, QString snapshot) {
-    if (!this->isValid()) return QVariantList();
+    if (!this->valid()) return QVariantList();
     QVariantList replyList;
     int r = dbClient->find(this->_url, query.toVariantMap(), replyList, QVariantMap(), snapshot);
     if (r != QDocdbClient::success) {
@@ -88,7 +90,7 @@ QVariantList QDocdbConnector::find(QJsonObject query, QString snapshot) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     QByteArray docId;
     int r = dbClient->insert(this->_url, doc.toVariantMap(), docId);
     if (r != QDocdbClient::success) {
@@ -99,7 +101,7 @@ QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::remove(QJsonObject query) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->remove(this->_url, query.toVariantMap());
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -109,7 +111,7 @@ QDocdbConnector::resultEnum QDocdbConnector::remove(QJsonObject query) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeId(QString docId) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->removeId(this->_url, docId.toLocal8Bit());
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -119,7 +121,7 @@ QDocdbConnector::resultEnum QDocdbConnector::removeId(QString docId) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeQueryResults() {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->set(this->_url, this->_query.toVariantMap(), QVariantList());
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -129,7 +131,7 @@ QDocdbConnector::resultEnum QDocdbConnector::removeQueryResults() {
 }
 
 void QDocdbConnector::setValue(QJsonArray value) {
-    if (!this->isValid()) return;
+    if (!this->valid()) return;
     int r = dbClient->set(this->_url, this->_query.toVariantMap(), value.toVariantList());
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -137,24 +139,26 @@ void QDocdbConnector::setValue(QJsonArray value) {
 }
 
 void QDocdbConnector::observe() {
-    if (this->isValid()) {
+    if (this->valid()) {
         this->observeId = dbClient->observe(this, this->_url, this->_query.toVariantMap(), this->_queryOptions.toVariantMap());
     }
 }
 
 void QDocdbConnector::unobserve() {
-    if (this->isValid()) {
+    if (this->valid()) {
         dbClient->unobserve(this->_url, this->observeId);
     }
 }
 
 void QDocdbConnector::observeQueryChanged(QJsonArray& reply) {
-    this->_value = reply;
-    emit this->valueChanged();
+    if (this->_value != reply) {
+        this->_value = reply;
+        emit this->valueChanged();
+    }
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::createIndex(QString field, QString indexName) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->createIndex(this->_url, field, indexName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -164,7 +168,7 @@ QDocdbConnector::resultEnum QDocdbConnector::createIndex(QString field, QString 
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::newSnapshot(QString snapshotName) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->newSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -174,7 +178,7 @@ QDocdbConnector::resultEnum QDocdbConnector::newSnapshot(QString snapshotName) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::revertToSnapshot(QString snapshotName) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->revertToSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -184,7 +188,7 @@ QDocdbConnector::resultEnum QDocdbConnector::revertToSnapshot(QString snapshotNa
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeSnapshot(QString snapshotName) {
-    if (!this->isValid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::error;
     int r = dbClient->removeSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
@@ -193,7 +197,7 @@ QDocdbConnector::resultEnum QDocdbConnector::removeSnapshot(QString snapshotName
     return QDocdbConnector::success;
 }
 
-bool QDocdbConnector::isValid() {
+bool QDocdbConnector::valid() {
     if (this->dbClient == NULL) return false;
     return (this->dbClient->isConnected()) && (this->urlValid);
 }
@@ -201,7 +205,6 @@ bool QDocdbConnector::isValid() {
 QDocdbConnector::QDocdbConnector() {
     this->_value = QJsonArray();
     this->_query = QJsonObject();
-    qRegisterMetaType<QJsonArray>("QJsonArray&");
     this->observeId = -1;
     this->dbClient = NULL;
 }

@@ -222,7 +222,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     }
                     case QDocdbLinkObject::typeSet: {
                         QJsonObject query = QJsonObject::fromVariantMap(linkObject->get("query").toMap());
-                        QJsonArray docs = QJsonArray::fromVariantList(linkObject->get("query").toList());
+                        QJsonArray docs = QJsonArray::fromVariantList(linkObject->get("documents").toList());
                         int r = tx->set(query, docs);
                         if (r == QDocCollection::success) {
                             r = tx->writeTransaction();
@@ -328,19 +328,20 @@ void QDocdbServer::observeQueryChanged(int observeId, QJsonArray& reply) {
 }
 
 QDocdbServer::QDocdbServer(QString serverName, QString baseDir) {
+    qRegisterMetaType<QJsonArray>("QJsonArray&");
     this->serverName = serverName;
     this->baseDir = baseDir + "/" + this->serverName;
     QDir dir(this->baseDir);
     if (!dir.exists()) {
         if (!dir.mkpath(".")) {
-            qDebug() << "Error: Can't create" << this->baseDir << endl;
+            qInfo() << "Error: Can't create" << this->baseDir << endl;
             return;
         }
     }
     connect(&this->tcpServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
     this->valid = tcpServer.listen(QHostAddress::LocalHost);
     if (!this->valid) {
-        qDebug() << "Error: Can't listen on " + this->serverName << endl;
+        qInfo() << "Error: Can't listen on " + this->serverName << endl;
     }
     const QString key("QDocdbServer/" + serverName);
     QSettings settings(QDOCDB_ORGANIZATION, QDOCDB_APPLICATION);

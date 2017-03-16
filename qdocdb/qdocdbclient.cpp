@@ -170,7 +170,7 @@ int QDocdbClient::set(QString url, QVariantMap query, QVariantList docs, int tra
     int id = this->newLinkObject(QDocdbLinkObject::typeSet, &dbQuery);
     dbQuery->set("url", url);
     dbQuery->set("query", query);
-    dbQuery->set("documents", query);
+    dbQuery->set("documents", docs);
     dbQuery->set("transactionId", transactionId);
 
     int r = this->sendAndWaitReply(id, dbQuery);
@@ -311,6 +311,7 @@ void QDocdbClient::clientRemoved() {
 }
 
 QDocdbClient::QDocdbClient() {
+    qRegisterMetaType<QJsonArray>("QJsonArray&");
     this->client = NULL;
     this->nextFId = 1;
 }

@@ -28,6 +28,7 @@ public:
     Q_PROPERTY(QJsonObject query READ query WRITE setQuery)
     Q_PROPERTY(QJsonObject queryOptions READ queryOptions WRITE setQueryOptions)
     Q_PROPERTY(QJsonArray value READ value WRITE setValue NOTIFY valueChanged)
+    Q_PROPERTY(bool valid READ valid NOTIFY validChanged)
     Q_PROPERTY(QString err READ err NOTIFY errChanged)
 
     QString url() { return this->_url; }
@@ -35,6 +36,7 @@ public:
     QJsonObject queryOptions() { return this->_queryOptions; }
     QJsonArray value() { return this->_value; }
     QString err() { return this->lastError; }
+    bool valid();
 
     void setUrl(QString);
     void setQuery(QJsonObject);
@@ -66,14 +68,13 @@ public:
     void observe();
     void unobserve();
 
-    bool isValid();
-
     QDocdbConnector();
     ~QDocdbConnector();
 
 signals:
     void valueChanged();
     void errChanged();
+    void validChanged();
 public slots:
     void observeQueryChanged(QJsonArray&);
 };

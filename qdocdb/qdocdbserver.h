@@ -1,7 +1,6 @@
 #ifndef QDOCDBSERVER_H
 #define QDOCDBSERVER_H
 
-
 #include <QString>
 #include <QTcpServer>
 #include <QTcpSocket>

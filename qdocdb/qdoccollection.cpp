@@ -1104,6 +1104,7 @@ int QDocCollectionTransaction::set(QJsonObject& query, QJsonArray& docs) {
             return r;
         }
     }
+
     return QDocCollection::success;
 }
 
