@@ -11,7 +11,7 @@
 
 #include "qdocdatabase.h"
 #include "qdocdblinkbase.h"
-#include "qdocutils.h"
+#include "qdocdbcommonconfig.h"
 
 class QDocdbServer : public QObject {
     Q_OBJECT
@@ -34,8 +34,12 @@ class QDocdbServer : public QObject {
 
     QDocDatabase* getDatabase(QString dbName);
 
+    QDocdbCommonConfig* commonConfig;
+
 public:
-    QDocdbServer(QString serverName, QString baseDir = QStandardPaths::writableLocation(QStandardPaths::DataLocation));
+    void setCustomIdGen(QDocIdGen*);
+
+    QDocdbServer(QString serverName, QDocdbCommonConfig* commonConfig, QString baseDir = QStandardPaths::writableLocation(QStandardPaths::DataLocation));
     ~QDocdbServer();
 
 public slots:

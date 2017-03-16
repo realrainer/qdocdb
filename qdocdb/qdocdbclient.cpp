@@ -25,6 +25,41 @@ int QDocdbClient::find(QString url, QVariantMap query, QVariantList &reply, QVar
     return r;
 }
 
+int QDocdbClient::findOne(QString url, QVariantMap query, QVariantMap &reply, QVariantMap queryOptions, QString snapshot) {
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeFindOne, &dbQuery);
+    dbQuery->set("url", url);
+    dbQuery->set("snapshot", snapshot);
+    dbQuery->set("query", query);
+    dbQuery->set("queryOptions", queryOptions);
+
+    int r = this->sendAndWaitReply(id, dbQuery);
+    delete dbQuery;
+
+    if (r == QDocdbClient::success) {
+        reply = this->replies[id]->get("reply").toMap();
+    }
+    return r;
+}
+
+int QDocdbClient::count(QString url, QVariantMap query, int &reply, QVariantMap queryOptions, QString snapshot) {
+
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeCount, &dbQuery);
+    dbQuery->set("url", url);
+    dbQuery->set("snapshot", snapshot);
+    dbQuery->set("query", query);
+    dbQuery->set("queryOptions", queryOptions);
+
+    int r = this->sendAndWaitReply(id, dbQuery);
+    delete dbQuery;
+
+    if (r == QDocdbClient::success) {
+        reply = this->replies[id]->get("count").toInt();
+    }
+    return r;
+}
+
 int QDocdbClient::createIndex(QString url, QString fieldName, QString indexName) {
 
     QDocdbLinkObject* dbQuery;

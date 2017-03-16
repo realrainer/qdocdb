@@ -1,6 +1,7 @@
 #include <QDir>
 #include <QDebug>
 #include <QObject>
+
 #include "qdocdatabase.h"
 
 int QDocDatabase::open(QString baseDir) {
@@ -29,7 +30,7 @@ QDocCollection* QDocDatabase::collection(QString collName, bool inMemory) {
         }
     }
     if (pColl == NULL) {
-        pColl = QDocCollection::open(baseDir, &this->idGen, inMemory);
+        pColl = QDocCollection::open(baseDir, this->commonConfig, inMemory);
         if (pColl != NULL) {
             this->collList.append(pColl);           
         }
@@ -37,7 +38,8 @@ QDocCollection* QDocDatabase::collection(QString collName, bool inMemory) {
     return pColl;
 }
 
-QDocDatabase::QDocDatabase() {
+QDocDatabase::QDocDatabase(QDocdbCommonConfig* commonConfig) {
+    this->commonConfig = commonConfig;
     this->isOpened = false;
     this->collList.clear();
 }

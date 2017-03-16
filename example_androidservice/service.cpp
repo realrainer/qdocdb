@@ -21,7 +21,8 @@ void MainService::onTimer() {
 }
 
 MainService::MainService() {
-    this->dbserver = new QDocdbServer("qdocdblocal");
+    this->dbconfig = new QDocdbCommonConfig();
+    this->dbserver = new QDocdbServer("qdocdblocal", this->dbconfig);
     this->dbUrl = "qdocdb://qdocdblocal/testdb?collection=coll&persistent=false";
     this->dbclient = new QDocdbClient();
 
@@ -40,4 +41,5 @@ MainService::~MainService() {
     if (this->dbserver != NULL) {
         delete this->dbserver;
     }
+    delete this->dbconfig;
 }

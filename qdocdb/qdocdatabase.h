@@ -3,10 +3,9 @@
 
 #include <QString>
 #include <QList>
-#include <QHash>
 #include <QObject>
 #include "qdoccollection.h"
-#include "qdocutils.h"
+#include "qdocdbcommonconfig.h"
 
 class QDocDatabase : public QObject {
 
@@ -15,7 +14,8 @@ class QDocDatabase : public QObject {
     bool isOpened;
     QString baseDir;
     QList<QDocCollection*> collList;
-    QDocIdGen idGen;
+
+    QDocdbCommonConfig* commonConfig;
 
 public:
     enum resultEnum {
@@ -28,7 +28,7 @@ public:
 
     QDocCollection* collection(QString collName, bool inMemory = false);
 
-    QDocDatabase();
+    QDocDatabase(QDocdbCommonConfig* commonConfig);
     ~QDocDatabase();
 };
 

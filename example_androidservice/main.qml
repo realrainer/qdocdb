@@ -15,12 +15,12 @@ ApplicationWindow {
         id: exchanger1
         url: "qdocdb://qdocdblocal/testdb?collection=coll&persistent=false"
         query: { "docType": "exchanger1" }
-        onValueChanged: {
-            console.log(JSON.stringify(exchanger1.value));
+        onValueOneChanged: {
+            console.log(JSON.stringify(exchanger1.valueOne));
         }
         onValidChanged: {
             if (exchanger1.valid) {
-                console.log(JSON.stringify(exchanger1.find({ "counter": { "$exists": true } })));
+                console.log(JSON.stringify(exchanger1.findOne({ "counter": { "$exists": true } })));
             }
         }
     }
@@ -34,13 +34,14 @@ ApplicationWindow {
         running: true
         repeat: true
         onTriggered: {
-            var value = exchanger2.value;
-            if (value.length == 0) {
-                value = [ { "docType": "exchanger2", "counter": 0 } ]
+            var value = exchanger2.valueOne;
+            if (typeof value.counter === "undefined") {
+                value.docType = "exchanger2";
+                value.counter = 0;
             } else {
-                value[0].counter = value[0].counter + 1;
+                value.counter = value.counter + 1;
             }
-            exchanger2.value = value;
+            exchanger2.valueOne = value;
         }
     }
 

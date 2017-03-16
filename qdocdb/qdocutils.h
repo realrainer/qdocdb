@@ -34,14 +34,6 @@ public:
     static QList<QString> unmarshalSnapshotsValue(QByteArray &bytes);
 };
 
-class QDocIdGen {
-    quint64 counter;
-public:
-    QByteArray getId();
-    QDocIdGen();
-    ~QDocIdGen();
-};
-
 class QDocUtils {
 public:
     static QJsonValue getJsonValueByPath(QJsonValue jsonValue, QString path);

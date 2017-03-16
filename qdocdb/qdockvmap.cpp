@@ -1,7 +1,6 @@
 
 #include <QUrl>
 #include <QDir>
-#include <QHash>
 
 #include "qdockvmap.h"
 

@@ -3,7 +3,6 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QObject>
-#include <QDataStream>
 #include "qdocdbserver.h"
 
 void QDocdbServer::newConnection() {
@@ -52,7 +51,7 @@ QDocDatabase* QDocdbServer::getDatabase(QString dbName) {
     if (this->databases.contains(dbName)) {
        return this->databases[dbName];
     } else {
-        QDocDatabase* db = new QDocDatabase();
+        QDocDatabase* db = new QDocDatabase(this->commonConfig);
         if (db->open(this->baseDir + "/" + dbName) != QDocDatabase::success) {
             delete db;
             return NULL;
@@ -102,20 +101,49 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
             int intType = linkObject->getType();
 
             switch (intType) {
-            case QDocdbLinkObject::typeFind: {
-                QJsonArray reply;
+            case QDocdbLinkObject::typeFind:
+            case QDocdbLinkObject::typeFindOne:
+            case QDocdbLinkObject::typeCount: {
                 QDocCollection* coll1;
                 if (snapshotName != "__CURRENT") {
                     coll1 = coll->getSnapshot(snapshotName);
                 } else {
                     coll1 = coll;
                 }
-                int r = coll1->find(QJsonObject::fromVariantMap(linkObject->get("query").toMap()), &reply, QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()));
-                if (r != QDocCollection::success) {
-                    errorString = coll->getLastError();
-                } else {
-                    replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeFindReply);
-                    replyObject->set("reply", reply.toVariantList());
+                switch (intType) {
+                case QDocdbLinkObject::typeFind: {
+                    QJsonArray reply;
+                    int r = coll1->find(QJsonObject::fromVariantMap(linkObject->get("query").toMap()), &reply, QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()));
+                    if (r != QDocCollection::success) {
+                        errorString = coll->getLastError();
+                    } else {
+                        replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeFindReply);
+                        replyObject->set("reply", reply.toVariantList());
+                    }
+                    break;
+                    }
+                case QDocdbLinkObject::typeFindOne: {
+                    QJsonObject reply;
+                    int r = coll1->findOne(QJsonObject::fromVariantMap(linkObject->get("query").toMap()), &reply, QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()));
+                    if (r != QDocCollection::success) {
+                        errorString = coll->getLastError();
+                    } else {
+                        replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeFindOneReply);
+                        replyObject->set("reply", reply.toVariantMap());
+                    }
+                    break;
+                    }
+                case QDocdbLinkObject::typeCount: {
+                    int reply;
+                    int r = coll1->count(QJsonObject::fromVariantMap(linkObject->get("query").toMap()), reply, QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()));
+                    if (r != QDocCollection::success) {
+                        errorString = coll->getLastError();
+                    } else {
+                        replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeCountReply);
+                        replyObject->set("count", reply);
+                    }
+                    break;
+                    }
                 }
                 if (snapshotName != "__CURRENT") {
                     delete coll1;
@@ -327,8 +355,10 @@ void QDocdbServer::observeQueryChanged(int observeId, QJsonArray& reply) {
     delete replyObject;
 }
 
-QDocdbServer::QDocdbServer(QString serverName, QString baseDir) {
+QDocdbServer::QDocdbServer(QString serverName, QDocdbCommonConfig* commonConfig, QString baseDir) {
     qRegisterMetaType<QJsonArray>("QJsonArray&");
+    this->commonConfig = commonConfig;
+
     this->serverName = serverName;
     this->baseDir = baseDir + "/" + this->serverName;
     QDir dir(this->baseDir);
@@ -347,6 +377,7 @@ QDocdbServer::QDocdbServer(QString serverName, QString baseDir) {
     QSettings settings(QDOCDB_ORGANIZATION, QDOCDB_APPLICATION);
     QString host = tcpServer.serverAddress().toString() + ":" + QString::number(tcpServer.serverPort());
     settings.setValue(key, host);
+
     this->transactionId = 0;
 }
 

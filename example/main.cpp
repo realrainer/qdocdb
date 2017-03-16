@@ -10,7 +10,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
 
-    QDocdbServer* dbserver = new QDocdbServer("qdocdblocal");
+    QDocdbCommonConfig* dbconfig = new QDocdbCommonConfig();
+    QDocdbServer* dbserver = new QDocdbServer("qdocdblocal", dbconfig);
 
     qmlRegisterType<QDocdbConnector>("com.example.qdocdb.classes", 1, 0, "QDocdbConnector");
 
@@ -19,6 +20,7 @@ int main(int argc, char *argv[])
 
     int r = app.exec();
     delete dbserver;
+    delete dbconfig;
 
     return r;
 }

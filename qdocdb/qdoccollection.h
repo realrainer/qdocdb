@@ -11,6 +11,7 @@
 #include <QByteArray>
 
 #include "qdockvinterface.h"
+#include "qdocdbcommonconfig.h"
 #include "qdocutils.h"
 
 typedef struct {
@@ -34,7 +35,7 @@ class QDocCollection : public QObject {
     QList<QByteArray> findLinkKeys(QJsonObject query, QString curPath, int unionLogic);
     void emitObserver(int observerId);
 
-    QDocCollection(QString collectionDir, bool inMemory = false);
+    QDocCollection(QString collectionDir, QDocdbCommonConfig* commonConfig, bool inMemory = false);
 
 public:
     enum classTypeEnum {
@@ -47,7 +48,7 @@ protected:
     classTypeEnum classType;
     unsigned char snapshotId;
 
-    QDocIdGen* pIdGen;
+    QDocdbCommonConfig* commonConfig;
     QDocKVInterface* kvdb;
     QString lastError;
 
@@ -81,7 +82,8 @@ public:
         errorAlreadyExists = 0x3,
         errorDatabase = 0x4,
         errorSnapshotIsExists = 0x5,
-        errorType = 0x6
+        errorType = 0x6,
+        errorObjectIsReadOnly = 0x7
     };
 
     // document iterator
@@ -110,7 +112,8 @@ public:
 
     QString getLastError();
     QString getBaseDir();
-    QDocIdGen* getIdGen();
+    QDocdbCommonConfig* getCommonConfig();
+
     QDocKVInterface* getKVDB();
     unsigned char getSnapshotId();
     QDocCollection::classTypeEnum getClassType();
@@ -118,6 +121,7 @@ public:
 
     // API
     int find(QJsonObject query, QJsonArray* pReply, QJsonObject options = QJsonObject());
+    int findOne(QJsonObject query, QJsonObject* pReply, QJsonObject options = QJsonObject());
     int count(QJsonObject query, int& replyCount, QJsonObject options = QJsonObject());
     int observe(QJsonObject query, QJsonObject queryOptions);
     int unobserve(int);
@@ -131,9 +135,9 @@ public:
     // debug
     int printAll();
 
-    static QDocCollection* open(QString collectionDir, QDocIdGen* pIdGen, bool inMemory = false);
+    static QDocCollection* open(QString collectionDir, QDocdbCommonConfig* commonConfig, bool inMemory = false);
 
-    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocIdGen* pIdGen, classTypeEnum classType);
+    QDocCollection(QDocKVInterface* kvdb, QString collectionDir, QDocdbCommonConfig* commonConfig, classTypeEnum classType);
     ~QDocCollection();
 
 signals:

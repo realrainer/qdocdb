@@ -3,8 +3,9 @@
 
 #include <QVariant>
 #include <QJsonArray>
-#include "qdocdblinkbase.h"
 #include <QMap>
+
+#include "qdocdblinkbase.h"
 
 class QDocdbClient: public QObject {
     Q_OBJECT
@@ -33,6 +34,12 @@ public:
 
     int find(QString url,
              QVariantMap query, QVariantList &reply, QVariantMap queryOptions = QVariantMap(),
+             QString snapshot = "__CURRENT");
+    int findOne(QString url,
+             QVariantMap query, QVariantMap &reply, QVariantMap queryOptions = QVariantMap(),
+             QString snapshot = "__CURRENT");
+    int count(QString url,
+             QVariantMap query, int &reply, QVariantMap queryOptions = QVariantMap(),
              QString snapshot = "__CURRENT");
     int createIndex(QString url, QString fieldName, QString indexName);
 

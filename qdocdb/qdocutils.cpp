@@ -4,8 +4,6 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QDataStream>
-#include <QTime>
-#include <QDateTime>
 
 #include "qdocutils.h"
 
@@ -145,28 +143,6 @@ QList<QString> QDocSerialize::unmarshalSnapshotsValue(QByteArray &bytes) {
     QDataStream ds(&valueData, QIODevice::ReadOnly);
     ds >> value;
     return value;
-}
-
-//---
-
-QByteArray QDocIdGen::getId() {
-    QByteArray id;
-    this->counter++;
-    unsigned int tstamp = QDateTime::currentSecsSinceEpoch() & 0xFFFFFFFF;
-    id = QByteArray::number(tstamp, 16);
-    id.append(QByteArray::number(this->counter, 16));
-    return id;
-}
-
-QDocIdGen::QDocIdGen() {
-    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
-    this->counter = qrand();
-    this->counter <<= 32;
-    this->counter |= qrand() & 0xFFFFFFFF;
-}
-
-QDocIdGen::~QDocIdGen() {
-
 }
 
 //---

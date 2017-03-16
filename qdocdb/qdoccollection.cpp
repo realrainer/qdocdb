@@ -1,12 +1,9 @@
 
-#include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QDebug>
-#include <QDataStream>
 #include <QList>
 
-#include "qdocutils.h"
 #include "qdockvleveldb.h"
 #include "qdockvmap.h"
 #include "qdoccollection.h"
@@ -463,6 +460,20 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QJsonObject opti
     return QDocCollection::success;
 }
 
+int QDocCollection::findOne(QJsonObject query, QJsonObject *pReply, QJsonObject options) {
+    QList<QByteArray> ids;
+    QJsonArray replyArr;
+    int r = this->find(query, &replyArr, ids, options);
+    if (r != QDocCollection::success) {
+        if (replyArr.count()) {
+            *pReply = replyArr[0].toObject();
+        }
+        return r;
+    }
+    return QDocCollection::success;
+}
+
+
 int QDocCollection::count(QJsonObject query, int &replyCount, QJsonObject options) {
     QList<QByteArray> ids;
     QJsonArray reply;
@@ -473,8 +484,6 @@ int QDocCollection::count(QJsonObject query, int &replyCount, QJsonObject option
     replyCount = ids.size();
     return QDocCollection::success;
 }
-
-//---
 
 int QDocCollection::printAll() {
     qDebug() << "printAll" << endl;
@@ -760,14 +769,11 @@ int QDocCollection::removeSnapshot(QString snapshotName) {
     return r;
 }
 
-QDocCollection* QDocCollection::open(QString collectionDir, QDocIdGen *pIdGen, bool inMemory) {
-    QDocCollection* pColl = new QDocCollection(collectionDir, inMemory);
+QDocCollection* QDocCollection::open(QString collectionDir, QDocdbCommonConfig* commonConfig, bool inMemory) {
+    QDocCollection* pColl = new QDocCollection(collectionDir, commonConfig, inMemory);
     if (!pColl->isOpened) {
         delete pColl;
         return NULL;
-    }
-    if (pColl != NULL) {
-        pColl->pIdGen = pIdGen;
     }
     return pColl;
 }
@@ -776,8 +782,8 @@ QString QDocCollection::getBaseDir() {
     return this->baseDir;
 }
 
-QDocIdGen* QDocCollection::getIdGen() {
-    return this->pIdGen;
+QDocdbCommonConfig* QDocCollection::getCommonConfig() {
+    return this->commonConfig;
 }
 
 QDocKVInterface* QDocCollection::getKVDB() {
@@ -792,8 +798,9 @@ unsigned char QDocCollection::getSnapshotId() {
     return this->snapshotId;
 }
 
-QDocCollection::QDocCollection(QString collectionDir, bool inMemory) {
+QDocCollection::QDocCollection(QString collectionDir, QDocdbCommonConfig* commonConfig, bool inMemory) {
     isOpened = false;
+    this->commonConfig = commonConfig;
     this->classType = QDocCollection::typeCollection;
     this->baseDir = collectionDir;
     this->nextObserverId = 0;
@@ -821,12 +828,12 @@ QDocCollection::QDocCollection(QString collectionDir, bool inMemory) {
     //this->printAll();
 }
 
-QDocCollection::QDocCollection(QDocKVInterface *kvdb, QString collectionDir, QDocIdGen *pIdGen, classTypeEnum classType) {
+QDocCollection::QDocCollection(QDocKVInterface *kvdb, QString collectionDir, QDocdbCommonConfig* commonConfig, classTypeEnum classType) {
     isOpened = false;
+    this->commonConfig = commonConfig;
     this->classType = classType;
     this->baseDir = collectionDir;
     this->kvdb = kvdb;
-    this->pIdGen = pIdGen;
     this->nextObserverId = 0;
     if (this->kvdb == NULL) {
         return;
@@ -1007,7 +1014,7 @@ int QDocCollectionTransaction::copyIndexValues(unsigned char dstSnapshotId, unsi
 int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool overwrite) {
     QJsonObject::iterator i_id = doc.find("_id");
     if (i_id == doc.end()) {
-        id = this->pIdGen->getId();
+        id = this->commonConfig->getIdGen()->getId();
         doc.insert("_id", QJsonValue(QString::fromLatin1(id)));
     } else {
         if (i_id.value().isString()) {
@@ -1018,10 +1025,17 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
         }
     }
     bool exists = false;
-    if (this->getJsonValue(id) != QJsonValue::Undefined) {
+    QJsonValue docOld = this->getJsonValue(id);
+    if (docOld != QJsonValue::Undefined) {
         exists = true;
         if (!overwrite) {
             return QDocCollection::errorAlreadyExists;
+        }
+    }
+    if (this->commonConfig->isReadOnlyKeyValid()) {
+        QJsonValue readOnlyValue = QDocUtils::getJsonValueByPath(docOld, this->commonConfig->getReadOnlyKey());
+        if ((!readOnlyValue.isUndefined()) && ((readOnlyValue.toBool() == true) || (readOnlyValue.toInt() == 1))) {
+            return QDocCollection::errorObjectIsReadOnly;
         }
     }
     int r = this->putJsonValue(id, QJsonValue(doc));
@@ -1216,7 +1230,7 @@ int QDocCollectionTransaction::writeTransaction() {
 }
 
 QDocCollectionTransaction::QDocCollectionTransaction(QDocCollection* pColl)
-    : QDocCollection(pColl->getKVDB()->newTransaction(), pColl->getBaseDir(), pColl->getIdGen(), QDocCollection::typeTransaction) {
+    : QDocCollection(pColl->getKVDB()->newTransaction(), pColl->getBaseDir(), pColl->getCommonConfig(), QDocCollection::typeTransaction) {
     this->baseObservers = pColl->getObservers();
     this->observers = *pColl->getObservers();
     this->snapshotId = pColl->getSnapshotId();
@@ -1225,7 +1239,7 @@ QDocCollectionTransaction::QDocCollectionTransaction(QDocCollection* pColl)
 
 //---
 QDocCollectionSnapshot::QDocCollectionSnapshot(QDocCollection* pColl, unsigned char snapshotId)
-    : QDocCollection(pColl->getKVDB(), pColl->getBaseDir(), pColl->getIdGen(), QDocCollection::typeReadOnlySnapshot) {
+    : QDocCollection(pColl->getKVDB(), pColl->getBaseDir(), pColl->getCommonConfig(), QDocCollection::typeReadOnlySnapshot) {
     this->snapshotId = snapshotId;
     this->parentColl = pColl;
 }

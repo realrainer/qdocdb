@@ -15,7 +15,8 @@ SOURCES += \
     $$PWD/qdockvmap.cpp \
     $$PWD/qdocdbserver.cpp \
     $$PWD/qdocdblinkbase.cpp \
-    $$PWD/qdocdbclient.cpp
+    $$PWD/qdocdbclient.cpp \
+    $$PWD/qdocdbcommonconfig.cpp
 
 HEADERS += \
     $$SOURCE_DIR/qdoccollection.h \
@@ -27,6 +28,7 @@ HEADERS += \
     $$PWD/qdockvmap.h \
     $$PWD/qdocdbserver.h \
     $$PWD/qdocdblinkbase.h \
-    $$PWD/qdocdbclient.h
+    $$PWD/qdocdbclient.h \
+    $$PWD/qdocdbcommonconfig.h
 
 include(leveldb/leveldb.pri)

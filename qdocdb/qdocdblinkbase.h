@@ -19,7 +19,11 @@ class QDocdbLinkObject : public QObject {
 public:
     enum LinkObjectType {
         typeFind,
+        typeFindOne,
         typeFindReply,
+        typeFindOneReply,
+        typeCount,
+        typeCountReply,
         typeCreateIndex,
         typeNewTransaction,
         typeNewTransactionReply,
@@ -72,6 +76,10 @@ signals:
 const QMap<QDocdbLinkObject::LinkObjectType, QString> QDOCDB_FUNCMAP({
     { QDocdbLinkObject::typeFind, "find" },
     { QDocdbLinkObject::typeFindReply, "findReply" },
+    { QDocdbLinkObject::typeFindOne, "findOne" },
+    { QDocdbLinkObject::typeFindOneReply, "findOneReply" },
+    { QDocdbLinkObject::typeCount, "count" },
+    { QDocdbLinkObject::typeCountReply, "countReply" },
     { QDocdbLinkObject::typeCreateIndex ,"createIndex" },
     { QDocdbLinkObject::typeNewTransaction, "newTransaction" },
     { QDocdbLinkObject::typeNewTransactionReply, "newTransactionReply" },

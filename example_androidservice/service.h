@@ -11,6 +11,8 @@ class MainService : public QObject {
     Q_OBJECT
 
     QTimer* timer;
+
+    QDocdbCommonConfig* dbconfig;
     QDocdbServer* dbserver;
     QDocdbClient* dbclient;
 

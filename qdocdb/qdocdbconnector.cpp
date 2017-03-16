@@ -3,10 +3,7 @@
 #include <QMap>
 #include <QUrl>
 #include <QUrlQuery>
-#include <QStandardPaths>
 
-#include "qdocdatabase.h"
-#include "qdoccollection.h"
 #include "qdocdbconnector.h"
 
 // database clients singleton
@@ -89,6 +86,26 @@ QVariantList QDocdbConnector::find(QJsonObject query, QString snapshot) {
     return replyList;
 }
 
+QVariantMap QDocdbConnector::findOne(QJsonObject query, QString snapshot) {
+    if (!this->valid()) return QVariantMap();
+    QVariantMap reply;
+    int r = dbClient->findOne(this->_url, query.toVariantMap(), reply, QVariantMap(), snapshot);
+    if (r != QDocdbClient::success) {
+        this->setLastError(dbClient->getLastError());
+    }
+    return reply;
+}
+
+int QDocdbConnector::count(QJsonObject query, QString snapshot) {
+    if (!this->valid()) return 0;
+    int reply;
+    int r = dbClient->count(this->_url, query.toVariantMap(), reply, QVariantMap(), snapshot);
+    if (r != QDocdbClient::success) {
+        this->setLastError(dbClient->getLastError());
+    }
+    return reply;
+}
+
 QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc) {
     if (!this->valid()) return QDocdbConnector::error;
     QByteArray docId;
@@ -138,6 +155,23 @@ void QDocdbConnector::setValue(QJsonArray value) {
     }
 }
 
+QJsonObject QDocdbConnector::valueOne() {
+    if (!this->_value.count()) {
+        return QJsonObject();
+    }
+    return this->_value[0].toObject();
+}
+
+void QDocdbConnector::setValueOne(QJsonObject value) {
+    QJsonArray arrValue = this->_value;
+    if (!arrValue.count()) {
+        arrValue.append(value);
+    } else {
+        arrValue[0] = QJsonValue(value);
+    }
+    this->setValue(arrValue);
+}
+
 void QDocdbConnector::observe() {
     if (this->valid()) {
         this->observeId = dbClient->observe(this, this->_url, this->_query.toVariantMap(), this->_queryOptions.toVariantMap());
@@ -154,6 +188,7 @@ void QDocdbConnector::observeQueryChanged(QJsonArray& reply) {
     if (this->_value != reply) {
         this->_value = reply;
         emit this->valueChanged();
+        emit this->valueOneChanged();
     }
 }
 
