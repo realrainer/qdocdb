@@ -41,6 +41,8 @@ public:
         typeObserveReply,
         typeObserveData,
         typeUnobserve,
+        typeGetModified,
+        typeGetModifiedReply,
         typeUnknown
     };
 
@@ -97,6 +99,8 @@ const QMap<QDocdbLinkObject::LinkObjectType, QString> QDOCDB_FUNCMAP({
     { QDocdbLinkObject::typeObserveReply, "observeReply" },
     { QDocdbLinkObject::typeObserveData, "observeData" },
     { QDocdbLinkObject::typeUnobserve, "unobserve" },
+    { QDocdbLinkObject::typeGetModified, "getModified" },
+    { QDocdbLinkObject::typeGetModifiedReply, "getModifiedReply" },
     { QDocdbLinkObject::typeUnknown, "unknown" }
 });
 

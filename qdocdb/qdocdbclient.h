@@ -56,6 +56,7 @@ public:
     int newSnapshot(QString url, QString snapshot);
     int revertToSnapshot(QString url, QString snapshot);
     int removeSnapshot(QString url, QString snapshot);
+    int getModified(QString url, QVariantList& docIds, QString snapshot = "__CURRENT");
 
     int observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions = QVariantMap());
     int unobserve(QString url, int observeId);

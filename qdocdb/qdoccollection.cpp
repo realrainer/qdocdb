@@ -52,6 +52,22 @@ QJsonValue QDocCollection::iterator::value(unsigned char& snapshotId, bool& isSi
     }
 }
 
+bool QDocCollection::iterator::isModifiedLater() {
+    bool isSingle = true;
+
+    for (this->kvit->seek(this->beginKey); (this->kvit->isValid()) && (this->kvit->key().mid(0, this->prefix.size()) == this->prefix) && (isSingle); ) {
+        QByteArray key = this->kvit->key();
+        if (key.size() > (this->prefix.size() + 1)) {
+            snapshotId = key[key.size() - 1];
+            if (snapshotId > this->snapshotId) {
+                isSingle = false;
+            }
+        }
+        this->kvit->next();
+    }
+    return !isSingle;
+}
+
 void QDocCollection::iterator::setupPrefix() {
     if (this->kvit->isValid()) {
         this->beginKey = this->kvit->key();
@@ -110,6 +126,24 @@ QHash<QString, QString> QDocCollection::getIndexes() {
     QByteArray indexesData;
     this->kvdb->getValue(key, indexesData);
     return QDocSerialize::unmarshalIndexes(indexesData);
+}
+
+QByteArray QDocCollection::constructDocumentLinkKey(QByteArray id, unsigned char snapshotId) {
+    QByteArray linkKey = QDocCollectionTransaction::constructDocumentStartKey(id);
+    linkKey.append(snapshotId);
+    return linkKey;
+}
+
+QByteArray QDocCollection::constructDocumentLinkKey(QString id) {
+    return this->constructDocumentLinkKey(id.toLocal8Bit());
+}
+
+QByteArray QDocCollection::constructDocumentLinkKey(QByteArray id) {
+    return QDocCollection::constructDocumentLinkKey(id, this->snapshotId);
+}
+
+QByteArray QDocCollection::constructDocumentStartKey(QByteArray id) {
+    return QByteArray("d:") + id + ":";
 }
 
 QByteArray QDocCollection::constructIndexValueStartKey(QString indexName, unsigned char snapshotId) {
@@ -330,6 +364,20 @@ int QDocCollection::find(QJsonObject query, QJsonArray* pReply, QList<QByteArray
     QHash<QString, QString> indexes = this->getIndexes();
 
     foreach(QString key, query.keys()) {
+        if (key == "_id") {
+            firstFind = false;
+            if (query[key].isArray()) {
+                QJsonArray arr = query[key].toArray();
+                for (QJsonArray::iterator it = arr.begin(); it != arr.end(); it++) {
+                    if (it->isString()) {
+                        linkKeys.append(this->constructDocumentLinkKey(it->toString()));
+                    }
+                }
+            } else
+            if (query[key].isString()) {
+                linkKeys.append(this->constructDocumentLinkKey(query[key].toString()));
+            }
+        } else
         if ((indexes.contains(key)) && (!query[key].isArray()) && (!query[key].isObject())) {
             QList<QByteArray> indexLinkKeys;
             int r = this->getIndexValueLinkKeys(indexes[key], query[key], indexLinkKeys);
@@ -482,6 +530,11 @@ int QDocCollection::count(QJsonObject query, int &replyCount, QJsonObject option
         return r;
     }
     replyCount = ids.size();
+    return QDocCollection::success;
+}
+
+int QDocCollection::getModified(QList<QByteArray> &ids) {
+    ids.clear();
     return QDocCollection::success;
 }
 
@@ -859,24 +912,6 @@ int QDocCollectionTransaction::putIndexes(QHash<QString, QString> &indexes) {
     return QDocCollection::success;
 }
 
-QByteArray QDocCollectionTransaction::constructDocumentLinkKey(QByteArray id, unsigned char snapshotId) {
-    QByteArray linkKey = QDocCollectionTransaction::constructDocumentStartKey(id);
-    linkKey.append(snapshotId);
-    return linkKey;
-}
-
-QByteArray QDocCollectionTransaction::constructDocumentLinkKey(QString id) {
-    return this->constructDocumentLinkKey(id.toLocal8Bit());
-}
-
-QByteArray QDocCollectionTransaction::constructDocumentLinkKey(QByteArray id) {
-    return QDocCollectionTransaction::constructDocumentLinkKey(id, this->snapshotId);
-}
-
-QByteArray QDocCollectionTransaction::constructDocumentStartKey(QByteArray id) {
-    return QByteArray("d:") + id + ":";
-}
-
 int QDocCollectionTransaction::putJsonValue(QByteArray id, QJsonValue jsonValue) {
     int r = this->kvdb->putValue(this->constructDocumentStartKey(id), "");
     if (r == QDocKVInterface::success) {
@@ -1238,6 +1273,18 @@ QDocCollectionTransaction::QDocCollectionTransaction(QDocCollection* pColl)
 }
 
 //---
+
+int QDocCollectionSnapshot::getModified(QList<QByteArray> &ids) {
+    ids.clear();
+    QDocCollection::iterator* it = this->newIterator();
+    for (it->seekToFirst(); it->isValid(); it->next()) {
+        if (it->isModifiedLater()) {
+            ids.append(it->key());
+        }
+    }
+    return QDocCollection::success;
+}
+
 QDocCollectionSnapshot::QDocCollectionSnapshot(QDocCollection* pColl, unsigned char snapshotId)
     : QDocCollection(pColl->getKVDB(), pColl->getBaseDir(), pColl->getCommonConfig(), QDocCollection::typeReadOnlySnapshot) {
     this->snapshotId = snapshotId;

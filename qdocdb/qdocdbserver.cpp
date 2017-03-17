@@ -103,7 +103,8 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
             switch (intType) {
             case QDocdbLinkObject::typeFind:
             case QDocdbLinkObject::typeFindOne:
-            case QDocdbLinkObject::typeCount: {
+            case QDocdbLinkObject::typeCount:
+            case QDocdbLinkObject::typeGetModified: {
                 QDocCollection* coll1;
                 if (snapshotName != "__CURRENT") {
                     coll1 = coll->getSnapshot(snapshotName);
@@ -141,6 +142,21 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     } else {
                         replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeCountReply);
                         replyObject->set("count", reply);
+                    }
+                    break;
+                    }
+                case QDocdbLinkObject::typeGetModified: {
+                    QList<QByteArray> ids;
+                    int r = coll1->getModified(ids);
+                    if (r != QDocCollection::success) {
+                        errorString = coll->getLastError();
+                    } else {
+                        replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeGetModifiedReply);
+                        QVariantList reply;
+                        for (QList<QByteArray>::iterator it = ids.begin(); it != ids.end(); it++) {
+                            reply.append(QVariant(*it));
+                        }
+                        replyObject->set("documentIds", reply);
                     }
                     break;
                     }

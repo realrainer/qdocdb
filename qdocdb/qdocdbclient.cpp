@@ -113,6 +113,21 @@ int QDocdbClient::removeSnapshot(QString url, QString snapshot) {
     return r;
 }
 
+int QDocdbClient::getModified(QString url, QVariantList& docIds, QString snapshot) {
+
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeGetModified, &dbQuery);
+    dbQuery->set("url", url);
+    dbQuery->set("snapshot", snapshot);
+    int r = this->sendAndWaitReply(id, dbQuery);
+    docIds.clear();
+    if (r == QDocdbClient::success) {
+        docIds = this->replies[id]->get("documentIds").toList();
+    }
+    delete dbQuery;
+    return r;
+}
+
 int QDocdbClient::newTransaction(QString url) {
 
     QDocdbLinkObject* dbQuery;

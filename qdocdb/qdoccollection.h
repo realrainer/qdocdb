@@ -57,6 +57,11 @@ protected:
     int nextObserverId;
     QHash<int, td_s_observer> observers;
 
+    inline QByteArray constructDocumentLinkKey(QByteArray id);
+    static inline QByteArray constructDocumentLinkKey(QByteArray id, unsigned char snapshotId);
+    inline QByteArray constructDocumentLinkKey(QString id);
+    static inline QByteArray constructDocumentStartKey(QByteArray id);
+
     inline QByteArray constructIndexValueKey(QString indexName, QByteArray valueData);
     inline QByteArray constructIndexValueKey(QString indexName, QJsonValue jsonValue);
     static inline QByteArray constructIndexValueStartKey(QString indexName, unsigned char snapshotId);
@@ -98,6 +103,7 @@ public:
         QByteArray key();
         QJsonValue value();
         QJsonValue value(unsigned char& snapshotId, bool& isSingle);
+        bool isModifiedLater();
         void seekToFirst();
         void seek(QByteArray id);
         void next();
@@ -131,6 +137,7 @@ public:
     int getSnapshotId(QString snapshotName, unsigned char& snapshotId);
     int revertToSnapshot(QString snapshotName);
     int removeSnapshot(QString snapshotName);
+    int getModified(QList<QByteArray>& ids);
     // ---
     // debug
     int printAll();
@@ -172,11 +179,6 @@ public:
     int writeTransaction();
     // ---
 
-    inline QByteArray constructDocumentLinkKey(QByteArray id);
-    static inline QByteArray constructDocumentLinkKey(QByteArray id, unsigned char snapshotId);
-    inline QByteArray constructDocumentLinkKey(QString id);
-    static inline QByteArray constructDocumentStartKey(QByteArray id);
-
     QDocCollectionTransaction(QDocCollection* pColl);
 };
 
@@ -184,6 +186,7 @@ class QDocCollectionSnapshot : public QDocCollection {
     QDocCollection* parentColl;
 
 public:
+    int getModified(QList<QByteArray>& ids);
     QDocCollectionSnapshot(QDocCollection* pColl, unsigned char);
 };
 
