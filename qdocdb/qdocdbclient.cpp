@@ -335,6 +335,7 @@ void QDocdbClient::receive(QDocdbLinkObject* linkObject) {
 void QDocdbClient::observeQueryChanged(int observeId, QJsonArray reply) {
     QMetaObject::invokeMethod(this->subs[observeId], "observeQueryChanged",
         Qt::DirectConnection,
+        Q_ARG(int, observeId),
         Q_ARG(QJsonArray, reply));
 }
 

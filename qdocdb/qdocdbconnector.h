@@ -56,10 +56,14 @@ public:
 
     Q_INVOKABLE resultEnum removeQueryResults();
 
-    Q_INVOKABLE resultEnum insert(QJsonObject doc);
-    Q_INVOKABLE resultEnum remove(QJsonObject query);
-    Q_INVOKABLE resultEnum removeId(QString id);
+    Q_INVOKABLE resultEnum insert(QJsonObject doc, int transactionId = -1);
+    Q_INVOKABLE resultEnum remove(QJsonObject query, int transactionId = -1);
+    Q_INVOKABLE resultEnum removeId(QString id, int transactionId = -1);
     Q_INVOKABLE resultEnum createIndex(QString field, QString indexName);
+
+    Q_INVOKABLE int newTransaction();
+    Q_INVOKABLE resultEnum writeTransaction(int transactionId);
+    Q_INVOKABLE resultEnum discardTransaction(int transactionId);
 
     Q_INVOKABLE resultEnum newSnapshot(QString snapshotName);
     Q_INVOKABLE resultEnum revertToSnapshot(QString snapshotName);
@@ -81,7 +85,7 @@ signals:
     void errChanged();
     void validChanged();
 public slots:
-    void observeQueryChanged(QJsonArray&);
+    void observeQueryChanged(int, QJsonArray&);
 };
 
 #endif // QDOCDBCONNECTOR_H

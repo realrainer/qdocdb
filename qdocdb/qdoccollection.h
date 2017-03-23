@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QHash>
 #include <QList>
+#include <QQueue>
 #include <QByteArray>
 
 #include "qdockvinterface.h"

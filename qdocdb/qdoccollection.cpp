@@ -450,33 +450,56 @@ void QDocCollection::applyOptions(QJsonArray *pReply, QList<QByteArray> *pIds, Q
         }
         if (!orderPath.isEmpty()) {
             QString oper;
-            if (orderUp) oper = "$gte"; else oper = "$lte";
-            QJsonArray::iterator it = pReply->begin();
-            QList<QByteArray>::iterator itl;
-            if (pIds != NULL) itl = pIds->begin();
-            while (it != pReply->end()) {
-                QJsonArray::iterator it0 = it + 1;
-                QList<QByteArray>::iterator itl0;
-                if (pIds != NULL) itl0 = itl + 1;
-                QJsonValue value = QDocUtils::getJsonValueByPath(*it, orderPath);
-                while (it0 != pReply->end()) {
-                    QJsonValue value0 = QDocUtils::getJsonValueByPath(*it0, orderPath);
-                    if (QDocUtils::compare(value, value0, oper)) {
-                        QJsonValue v = *it;
-                        *it = *it0;
-                        *it0 = v;
-                        value = value0;
-                        if (pIds != NULL) {
-                            QByteArray bv = *itl;
-                            *itl = *itl0;
-                            *itl0 = bv;
+            if (orderUp) oper = "$gt"; else oper = "$lt";
+
+            QMap<QString, QJsonValue> valueByPathMap;
+
+            bool swapped = true;
+            while (swapped) {
+                QJsonArray::iterator it = pReply->begin();
+                QList<QByteArray>::iterator itl;
+                if (pIds != NULL) itl = pIds->begin();
+                swapped = false;
+
+                while (it != pReply->end()) {
+                    if ((it + 1) != pReply->end()) {
+                        QJsonArray::iterator it1 = it + 1;
+                        QList<QByteArray>::iterator itl1;
+                        if (pIds != NULL) itl1 = itl + 1;
+
+                        QString id = it->toObject()["_id"].toString();
+                        QJsonValue value;
+                        if (valueByPathMap.contains(id)) {
+                            value = valueByPathMap[id];
+                        } else {
+                            value = QDocUtils::getJsonValueByPath(*it, orderPath);
+                            valueByPathMap[id] = value;
+                        }
+
+                        id = it1->toObject()["_id"].toString();
+                        QJsonValue value1;
+                        if (valueByPathMap.contains(id)) {
+                            value1 = valueByPathMap[id];
+                        } else {
+                            value1 = QDocUtils::getJsonValueByPath(*it1, orderPath);
+                            valueByPathMap[id] = value1;
+                        }
+
+                        if (QDocUtils::compare(value, value1, oper)) {
+                            swapped = true;
+                            QJsonValue v = *it;
+                            *it = *it1;
+                            *it1 = v;
+                            if (pIds != NULL) {
+                                QByteArray bv = *itl;
+                                *itl = *itl1;
+                                *itl1 = bv;
+                            }
                         }
                     }
-                    it0++;
-                    if (pIds != NULL) itl0++;
+                    it++;
+                    if (pIds != NULL) itl++;
                 }
-                it++;
-                if (pIds != NULL) itl++;
             }
         }
     }
