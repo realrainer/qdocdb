@@ -271,6 +271,7 @@ int QDocdbClient::sendAndWaitReply(int id, QDocdbLinkObject* linkObject) {
     this->client->send(linkObject);
     bool ok = linkObject->waitForDone();
     this->activeQueries.remove(id);
+    QMetaObject::invokeMethod(this, "destroyReply", Qt::QueuedConnection, Q_ARG(int, id));
     if (!ok) {
         this->lastError = "Error: Timeout waiting reply";
         return QDocdbClient::errorConnection;
@@ -326,7 +327,6 @@ void QDocdbClient::receive(QDocdbLinkObject* linkObject) {
     if (this->activeQueries.contains(id)) {
         this->replies[id] = linkObject;
         emit this->activeQueries[id]->done();
-        QMetaObject::invokeMethod(this, "destroyReply", Qt::QueuedConnection, Q_ARG(int, id));
     } else {
         delete linkObject;
     }
