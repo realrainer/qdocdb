@@ -64,26 +64,33 @@ QDocDatabase* QDocdbServer::getDatabase(QString dbName) {
 
 void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
     QDocdbLinkBase* client = (QDocdbLinkBase*)this->sender();
-    QUrl url(linkObject->get("url").toString());
-    QString dbName = url.path().mid(1);
+    bool urlNeeded = ((linkObject->getType() != QDocdbLinkObject::typeWriteTransaction) &&
+                      (linkObject->getType() != QDocdbLinkObject::typeDiscardTransaction));
+    QString errorString;
+    QDocDatabase* db;
     QString collName;
+    QString dbName;
     bool inMemory = false;
-    if (url.hasQuery()) {
-        QUrlQuery urlQuery(url);
-        collName = urlQuery.queryItemValue("collection");
-        if (urlQuery.hasQueryItem("persistent")) {
-            if (urlQuery.queryItemValue("persistent") == "false") {
-                inMemory = true;
+
+    if (urlNeeded) {
+        QUrl url(linkObject->get("url").toString());
+        dbName = url.path().mid(1);
+        if (url.hasQuery()) {
+            QUrlQuery urlQuery(url);
+            collName = urlQuery.queryItemValue("collection");
+            if (urlQuery.hasQueryItem("persistent")) {
+                if (urlQuery.queryItemValue("persistent") == "false") {
+                    inMemory = true;
+                }
             }
         }
-    }
-    QString errorString;
-    if (collName.isEmpty()) {
-        errorString = "Collection name is empty";
-    }
-    QDocDatabase* db = this->getDatabase(dbName);
-    if (db == NULL) {
-        errorString = "Can't open database " + dbName;
+        if (collName.isEmpty()) {
+            errorString = "Collection name is empty";
+        }
+        db = this->getDatabase(dbName);
+        if (db == NULL) {
+            errorString = "Can't open database " + dbName;
+        }
     }
 
     int id = linkObject->get("id").toInt();
@@ -94,12 +101,15 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
         if (snapshotName.isEmpty()) {
             snapshotName = "__CURRENT";
         }
-        QDocCollection* coll = db->collection(collName, inMemory);
-        if (coll == NULL) {
-            errorString = "Can't open collection " + collName + " in database " + dbName;
-        } else {
+        QDocCollection* coll;
+        if (urlNeeded) {
+            coll = db->collection(collName, inMemory);
+            if (coll == NULL) {
+                errorString = "Can't open collection " + collName + " in database " + dbName;
+            }
+        }
+        if (errorString.isEmpty()) {
             int intType = linkObject->getType();
-
             switch (intType) {
             case QDocdbLinkObject::typeFind:
             case QDocdbLinkObject::typeFindOne:
@@ -232,9 +242,6 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     case QDocdbLinkObject::typeInsert: {
                         QByteArray docId;
                         int r = tx->insert(QJsonObject::fromVariantMap(linkObject->get("document").toMap()), docId, linkObject->get("overwrite").toBool());
-                        if (r == QDocCollection::success) {
-                            r = tx->writeTransaction();
-                        }
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         } else {
@@ -246,9 +253,6 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     case QDocdbLinkObject::typeRemove: {
                         QJsonObject query = QJsonObject::fromVariantMap(linkObject->get("query").toMap());
                         int r = tx->remove(query);
-                        if (r == QDocCollection::success) {
-                            r = tx->writeTransaction();
-                        }
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         }
@@ -256,9 +260,6 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     }
                     case QDocdbLinkObject::typeRemoveId: {
                         int r = tx->removeById(linkObject->get("documentId").toByteArray());
-                        if (r == QDocCollection::success) {
-                            r = tx->writeTransaction();
-                        }
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         }
@@ -268,9 +269,6 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                         QJsonObject query = QJsonObject::fromVariantMap(linkObject->get("query").toMap());
                         QJsonArray docs = QJsonArray::fromVariantList(linkObject->get("documents").toList());
                         int r = tx->set(query, docs);
-                        if (r == QDocCollection::success) {
-                            r = tx->writeTransaction();
-                        }
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         }
@@ -278,6 +276,10 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     }
                     }
                     if (txId == -1) {
+                        int r = tx->writeTransaction();
+                        if (r != QDocCollection::success) {
+                            errorString = tx->getLastError();
+                        }
                         delete tx;
                     }
                 }
