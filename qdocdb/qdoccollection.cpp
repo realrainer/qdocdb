@@ -587,7 +587,7 @@ int QDocCollection::printAll() {
 }
 
 int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions) {
-    int id = this->nextObserverId++;
+    int id = this->commonConfig->getIdGen()->getNextNumber();
     td_s_observer observer;
     observer.id = id;
     observer.query = query;
@@ -879,7 +879,6 @@ QDocCollection::QDocCollection(QString collectionDir, QDocdbCommonConfig* common
     this->commonConfig = commonConfig;
     this->classType = QDocCollection::typeCollection;
     this->baseDir = collectionDir;
-    this->nextObserverId = 0;
     if (inMemory) {
         this->kvdb = new QDocKVMap("map://" + collectionDir);
     } else {
@@ -910,7 +909,6 @@ QDocCollection::QDocCollection(QDocKVInterface *kvdb, QString collectionDir, QDo
     this->classType = classType;
     this->baseDir = collectionDir;
     this->kvdb = kvdb;
-    this->nextObserverId = 0;
     if (this->kvdb == NULL) {
         return;
     }

@@ -13,11 +13,16 @@ QByteArray QDocIdGen::getId() {
     return id;
 }
 
+int QDocIdGen::getNextNumber() {
+    return this->nextNumber++;
+}
+
 QDocIdGen::QDocIdGen() {
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
     this->counter = qrand();
     this->counter <<= 32;
     this->counter |= qrand() & 0xFFFFFFFF;
+    this->nextNumber = 1;
 }
 
 QDocIdGen::~QDocIdGen() {

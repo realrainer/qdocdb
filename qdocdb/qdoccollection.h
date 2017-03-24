@@ -55,7 +55,6 @@ protected:
 
     QHash<QString, QString> getIndexes();
 
-    int nextObserverId;
     QHash<int, td_s_observer> observers;
 
     inline QByteArray constructDocumentLinkKey(QByteArray id);

@@ -6,8 +6,10 @@
 
 class QDocIdGen {
     quint64 counter;
+    int nextNumber;
 public:
     QByteArray getId();
+    int getNextNumber();
     QDocIdGen();
     ~QDocIdGen();
 };
