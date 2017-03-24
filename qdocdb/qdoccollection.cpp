@@ -535,13 +535,13 @@ int QDocCollection::findOne(QJsonObject query, QJsonObject *pReply, QJsonObject 
     QList<QByteArray> ids;
     QJsonArray replyArr;
     int r = this->find(query, &replyArr, ids, options);
-    if (r != QDocCollection::success) {
+    if (r == QDocCollection::success) {
         if (replyArr.count()) {
             *pReply = replyArr[0].toObject();
         }
-        return r;
+        QDocCollection::success;
     }
-    return QDocCollection::success;
+    return r;
 }
 
 
