@@ -10,6 +10,8 @@ ios: DEFINES += OS_MACOSX
 
 android {
     DEFINES += OS_ANDROID
+    QMAKE_CFLAGS += -Wno-unused
+    QMAKE_CXXFLAGS += -Wno-unused
 } else {
 
 linux {

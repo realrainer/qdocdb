@@ -1093,11 +1093,14 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
             return QDocCollection::errorAlreadyExists;
         }
     }
-    if (this->commonConfig->isReadOnlyKeyValid()) {
+    if ((exists) && (this->commonConfig->isReadOnlyKeyValid())) {
         QJsonValue readOnlyValue = QDocUtils::getJsonValueByPath(docOld, this->commonConfig->getReadOnlyKey());
         if ((!readOnlyValue.isUndefined()) && ((readOnlyValue.toBool() == true) || (readOnlyValue.toInt() == 1))) {
             return QDocCollection::errorObjectIsReadOnly;
         }
+    }
+    if ((!exists) && (this->commonConfig->isUUIDPathValid())) {
+        doc.insert(this->commonConfig->getUUIDPath(), QJsonValue(QString::fromLatin1(this->commonConfig->getIdGen()->getUUID())));
     }
     int r = this->putJsonValue(id, QJsonValue(doc));
     if (r != QDocCollection::success) {

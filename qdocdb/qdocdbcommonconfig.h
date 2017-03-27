@@ -7,8 +7,11 @@
 class QDocIdGen {
     quint64 counter;
     int nextNumber;
+protected:
+    QByteArray getRandomBytes(int);
 public:
     QByteArray getId();
+    QByteArray getUUID();
     int getNextNumber();
     QDocIdGen();
     ~QDocIdGen();
@@ -21,13 +24,17 @@ class QDocdbCommonConfig {
 
     QString readOnlyKey;
     bool readOnlyKeyValid;
+    QString UUIDPath;
+    bool UUIDPathValid;
 
 public:
     QDocIdGen* getIdGen();
     QString getReadOnlyKey();
+    QString getUUIDPath();
     bool isReadOnlyKeyValid();
+    bool isUUIDPathValid();
 
-    QDocdbCommonConfig(QDocIdGen* idGen = NULL, QString readOnlyKey = "");
+    QDocdbCommonConfig(QDocIdGen* idGen = NULL, QString UUIDPath = "", QString readOnlyKey = "");
     ~QDocdbCommonConfig();
 };
 

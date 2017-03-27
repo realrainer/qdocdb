@@ -67,7 +67,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
     bool urlNeeded = ((linkObject->getType() != QDocdbLinkObject::typeWriteTransaction) &&
                       (linkObject->getType() != QDocdbLinkObject::typeDiscardTransaction));
     QString errorString;
-    QDocDatabase* db;
+    QDocDatabase* db = NULL;
     QString collName;
     QString dbName;
     bool inMemory = false;
@@ -101,7 +101,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
         if (snapshotName.isEmpty()) {
             snapshotName = "__CURRENT";
         }
-        QDocCollection* coll;
+        QDocCollection* coll = NULL;
         if (urlNeeded) {
             coll = db->collection(collName, inMemory);
             if (coll == NULL) {
