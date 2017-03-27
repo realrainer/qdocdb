@@ -56,7 +56,9 @@ void QDocdbConnector::setUrl(QString url) {
             dbClients[serverName] = this->dbClient;
         }
     }
-    this->observe();
+    if ((!this->_query.isEmpty()) || (this->_allowEmptyQuery)) {
+        this->observe();
+    }
     emit this->validChanged();
 }
 
@@ -64,6 +66,14 @@ void QDocdbConnector::setQuery(QJsonObject query) {
     if (this->_query != query) {
         this->unobserve();
         this->_query = query;
+        this->observe();
+    }
+}
+
+void QDocdbConnector::setAllowEmptyQuery(bool allowEmptyQuery) {
+    if (this->_allowEmptyQuery != allowEmptyQuery) {
+        this->unobserve();
+        this->_allowEmptyQuery = allowEmptyQuery;
         this->observe();
     }
 }
@@ -264,6 +274,7 @@ bool QDocdbConnector::valid() {
 
 QDocdbConnector::QDocdbConnector() {
     this->_value = QJsonArray();
+    this->_allowEmptyQuery = false;
     this->_query = QJsonObject();
     this->observeId = -1;
     this->dbClient = NULL;

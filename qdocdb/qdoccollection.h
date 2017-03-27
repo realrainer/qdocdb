@@ -129,7 +129,7 @@ public:
     int find(QJsonObject query, QJsonArray* pReply, QJsonObject options = QJsonObject());
     int findOne(QJsonObject query, QJsonObject* pReply, QJsonObject options = QJsonObject());
     int count(QJsonObject query, int& replyCount, QJsonObject options = QJsonObject());
-    int observe(QJsonObject query, QJsonObject queryOptions);
+    int observe(QJsonObject query, QJsonObject queryOptions, int preferedId = -1);
     int unobserve(int);
     QDocCollectionTransaction* newTransaction();
     int newSnapshot(QString snapshotName);

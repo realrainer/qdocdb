@@ -229,7 +229,7 @@ int QDocdbClient::set(QString url, QVariantMap query, QVariantList docs, int tra
     return r;
 }
 
-int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions) {
+int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions, int preferedId) {
 
     QDocdbLinkObject* dbQuery;
     int id = this->newLinkObject(QDocdbLinkObject::typeObserve, &dbQuery);
@@ -237,12 +237,20 @@ int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariant
     dbQuery->set("url", url);
     dbQuery->set("query", query);
     dbQuery->set("queryOptions", queryOptions);
+    dbQuery->set("preferedId", preferedId);
 
     int r = this->sendAndWaitReply(id, dbQuery);
     delete dbQuery;
 
     if (r == QDocdbClient::success) {
         int observeId = this->replies[id]->get("observeId").toInt();
+        if (!this->observerInfo.contains(observeId)) {
+            QDocdbClient::ObserverInfo& info = this->observerInfo[observeId];
+            info.sub = sub;
+            info.url = url;
+            info.query = query;
+            info.queryOptions = queryOptions;
+        }
         this->subs[observeId] = sub;
         return observeId;
     } else {
@@ -262,6 +270,9 @@ int QDocdbClient::unobserve(QString url, int observeId) {
 
     if (r == QDocdbClient::success) {
         this->subs.remove(observeId);
+        if (this->observerInfo.contains(observeId)) {
+            this->observerInfo.remove(observeId);
+        }
     }
     return r;
 }
@@ -292,7 +303,7 @@ int QDocdbClient::newLinkObject(QDocdbLinkObject::LinkObjectType type, QDocdbLin
 }
 
 int QDocdbClient::connectToServer(QString serverName) {
-
+    this->serverName = serverName;
     const QString key("QDocdbServer/" + serverName);
     QSettings settings(QDOCDB_ORGANIZATION, QDOCDB_APPLICATION);
     QString host = settings.value(key).toString();
@@ -305,6 +316,7 @@ int QDocdbClient::connectToServer(QString serverName) {
         delete socket;
         return QDocdbClient::errorConnection;
     }
+    this->needConnected = true;
     this->client = new QDocdbLinkBase(socket);
     connect(this->client, SIGNAL(receive(QDocdbLinkObject*)), this, SLOT(receive(QDocdbLinkObject*)), Qt::DirectConnection);
     connect(this->client, SIGNAL(clientRemoved()), this, SLOT(clientRemoved()), Qt::DirectConnection);
@@ -347,6 +359,7 @@ void QDocdbClient::destroyReply(int id) {
 }
 
 void QDocdbClient::disconnectFromServer() {
+    this->needConnected = false;
     if (this->client != NULL) {
         this->client->close();
     }
@@ -359,12 +372,38 @@ void QDocdbClient::clientRemoved() {
         disconnect(this->client, SIGNAL(clientRemoved()), this, SLOT(clientRemoved()));
         this->client = NULL;
     }
+    this->subs.clear();
+
+    if (this->needConnected) {
+        this->connectTimer.setInterval(this->nextConnectWaitTimeout);
+        this->connectTimer.start();
+    }
+}
+
+void QDocdbClient::onConnectTimer() {
+    this->connectTimer.stop();
+    if (this->connectToServer(this->serverName) == QDocdbClient::success) {
+        this->nextConnectWaitTimeout = 1000;
+        for (QMap<int, ObserverInfo>::iterator it = this->observerInfo.begin(); it != this->observerInfo.end(); it++) {
+            ObserverInfo& info = it.value();
+            this->observe(info.sub, info.url, info.query, info.queryOptions, it.key());
+        }
+    } else {
+        this->connectTimer.setInterval(this->nextConnectWaitTimeout);
+        if (this->nextConnectWaitTimeout < 60000) {
+            this->nextConnectWaitTimeout += 5000;
+        }
+        this->connectTimer.start();
+    }
 }
 
 QDocdbClient::QDocdbClient() {
     qRegisterMetaType<QJsonArray>("QJsonArray&");
     this->client = NULL;
     this->nextFId = 1;
+    this->needConnected = false;
+    this->nextConnectWaitTimeout = 1000;
+    connect(&this->connectTimer, SIGNAL(timeout()), this, SLOT(onConnectTimer()));
 }
 
 QDocdbClient::~QDocdbClient() {

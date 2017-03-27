@@ -586,8 +586,13 @@ int QDocCollection::printAll() {
     return 0;
 }
 
-int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions) {
-    int id = this->commonConfig->getIdGen()->getNextNumber();
+int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions, int preferedId) {
+    int id;
+    if ((preferedId == -1) || (this->observers.contains(preferedId))) {
+        id = this->commonConfig->getIdGen()->getNextNumber();
+    } else {
+        id = preferedId;
+    }
     td_s_observer observer;
     observer.id = id;
     observer.query = query;

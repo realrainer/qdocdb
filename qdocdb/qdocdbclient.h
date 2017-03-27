@@ -4,12 +4,14 @@
 #include <QVariant>
 #include <QJsonArray>
 #include <QMap>
+#include <QTimer>
 
 #include "qdocdblinkbase.h"
 
 class QDocdbClient: public QObject {
     Q_OBJECT
 
+    QString serverName;
     QDocdbLinkBase* client;
     int nextFId;
 
@@ -17,7 +19,20 @@ class QDocdbClient: public QObject {
     QMap<int, QDocdbLinkObject*> replies;
     QMap<int, QObject*> subs;
 
+    typedef struct {
+        QObject* sub;
+        QString url;
+        QVariantMap query;
+        QVariantMap queryOptions;
+    } ObserverInfo;
+
+    QMap<int, QDocdbClient::ObserverInfo> observerInfo;
+
     QString lastError;
+
+    QTimer connectTimer;
+    int nextConnectWaitTimeout;
+    bool needConnected;
 
     int sendAndWaitReply(int id, QDocdbLinkObject*);
 
@@ -58,7 +73,7 @@ public:
     int removeSnapshot(QString url, QString snapshot);
     int getModified(QString url, QVariantList& docIds, QString snapshot = "__CURRENT");
 
-    int observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions = QVariantMap());
+    int observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions = QVariantMap(), int preferedId = -1);
     int unobserve(QString url, int observeId);
 
     int connectToServer(QString serverName);
@@ -76,6 +91,8 @@ public slots:
     void destroyReply(int id);
 
     void observeQueryChanged(int observeId, QJsonArray reply);
+
+    void onConnectTimer();
 };
 
 #endif // QDOCDBCLIENT_H

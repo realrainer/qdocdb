@@ -319,7 +319,9 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
             }
             case QDocdbLinkObject::typeObserve: {
                 connect(coll, SIGNAL(observeQueryChanged(int,QJsonArray&)), this, SLOT(observeQueryChanged(int,QJsonArray&)), Qt::QueuedConnection);
-                int observeId = coll->observe(QJsonObject::fromVariantMap(linkObject->get("query").toMap()), QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()));
+                int observeId = coll->observe(QJsonObject::fromVariantMap(linkObject->get("query").toMap()),
+                                              QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()),
+                                              linkObject->get("preferedId").toInt());
                 this->observeClient[observeId] = client;
                 this->observeCollection[observeId] = coll;
                 replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeObserveReply);
