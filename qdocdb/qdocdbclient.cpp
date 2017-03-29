@@ -113,6 +113,20 @@ int QDocdbClient::removeSnapshot(QString url, QString snapshot) {
     return r;
 }
 
+int QDocdbClient::getSnapshotList(QString url, QStringList& snapshotList) {
+
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeGetSnapshotList, &dbQuery);
+    dbQuery->set("url", url);
+    int r = this->sendAndWaitReply(id, dbQuery);
+    snapshotList.clear();
+    if (r == QDocdbClient::success) {
+        snapshotList = this->replies[id]->get("snapshotList").toStringList();
+    }
+    delete dbQuery;
+    return r;
+}
+
 int QDocdbClient::getModified(QString url, QVariantList& docIds, QString snapshot) {
 
     QDocdbLinkObject* dbQuery;
@@ -222,6 +236,30 @@ int QDocdbClient::set(QString url, QVariantMap query, QVariantList docs, int tra
     dbQuery->set("query", query);
     dbQuery->set("documents", docs);
     dbQuery->set("transactionId", transactionId);
+
+    int r = this->sendAndWaitReply(id, dbQuery);
+    delete dbQuery;
+
+    return r;
+}
+
+int QDocdbClient::exclusiveLock(QString url) {
+
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeExclusiveLock, &dbQuery);
+    dbQuery->set("url", url);
+
+    int r = this->sendAndWaitReply(id, dbQuery);
+    delete dbQuery;
+
+    return r;
+}
+
+int QDocdbClient::unlock(QString url) {
+
+    QDocdbLinkObject* dbQuery;
+    int id = this->newLinkObject(QDocdbLinkObject::typeUnlock, &dbQuery);
+    dbQuery->set("url", url);
 
     int r = this->sendAndWaitReply(id, dbQuery);
     delete dbQuery;

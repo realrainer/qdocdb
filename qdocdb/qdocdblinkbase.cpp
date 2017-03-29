@@ -52,6 +52,17 @@ void QDocdbLinkBase::send(QDocdbLinkObject* linkObject) {
     this->socket->write(data);
 }
 
+void QDocdbLinkBase::appendUnlockWait(QString, QDocdbLinkObject* linkObject) {
+    this->unlockWait.enqueue(linkObject);
+}
+
+void QDocdbLinkBase::onUnlocked(QString) {
+    int count = this->unlockWait.count();
+    while (count--) {
+        emit this->receive(this->unlockWait.dequeue());
+    }
+}
+
 QDocdbLinkBase::QDocdbLinkBase(QTcpSocket* socket) {
     this->socket = socket;
     this->rxDataLength = 0;
@@ -62,6 +73,9 @@ QDocdbLinkBase::QDocdbLinkBase(QTcpSocket* socket) {
 QDocdbLinkBase::~QDocdbLinkBase() {
     disconnect(this->socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
     disconnect(this->socket, SIGNAL(disconnected()), this, SLOT(disconnected()));
+    while (this->unlockWait.count()) {
+        delete this->unlockWait.dequeue();
+    }
 }
 
 // ---

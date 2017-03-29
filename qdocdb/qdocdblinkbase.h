@@ -6,6 +6,7 @@
 #include <QTcpSocket>
 #include <QSignalSpy>
 #include <QMap>
+#include <QQueue>
 
 const QLatin1String QDOCDB_ORGANIZATION = QLatin1String("com.example");
 const QLatin1String QDOCDB_APPLICATION = QLatin1String("qdocdb");
@@ -37,12 +38,16 @@ public:
         typeNewSnapshot,
         typeRevertToSnapshot,
         typeRemoveSnapshot,
+        typeGetSnapshotList,
+        typeGetSnapshotListReply,
         typeObserve,
         typeObserveReply,
         typeObserveData,
         typeUnobserve,
         typeGetModified,
         typeGetModifiedReply,
+        typeExclusiveLock,
+        typeUnlock,
         typeUnknown
     };
 
@@ -95,12 +100,16 @@ const QMap<QDocdbLinkObject::LinkObjectType, QString> QDOCDB_FUNCMAP({
     { QDocdbLinkObject::typeNewSnapshot, "newSnapshot" },
     { QDocdbLinkObject::typeRevertToSnapshot, "revertToSnapshot" },
     { QDocdbLinkObject::typeRemoveSnapshot, "removeSnapshot" },
+    { QDocdbLinkObject::typeGetSnapshotList, "getSnapshotList" },
+    { QDocdbLinkObject::typeGetSnapshotListReply, "getSnapshotListReply" },
     { QDocdbLinkObject::typeObserve, "observe" },
     { QDocdbLinkObject::typeObserveReply, "observeReply" },
     { QDocdbLinkObject::typeObserveData, "observeData" },
     { QDocdbLinkObject::typeUnobserve, "unobserve" },
     { QDocdbLinkObject::typeGetModified, "getModified" },
     { QDocdbLinkObject::typeGetModifiedReply, "getModifiedReply" },
+    { QDocdbLinkObject::typeExclusiveLock, "exclusiveLock" },
+    { QDocdbLinkObject::typeUnlock, "unlock" },
     { QDocdbLinkObject::typeUnknown, "unknown" }
 });
 
@@ -111,17 +120,24 @@ class QDocdbLinkBase : public QObject {
     QByteArray rxData;
     int rxDataLength;
 
+    QQueue<QDocdbLinkObject*> unlockWait;
+
 public:
     QTcpSocket* getSocket();
     void send(QDocdbLinkObject* linkObject);
     void parse(QByteArray* data);
     void close();
+
+    void appendUnlockWait(QString, QDocdbLinkObject*);
+
     QDocdbLinkBase(QTcpSocket* socket);
     ~QDocdbLinkBase();
 
 public slots:
     void readyRead();
     void disconnected();
+
+    void onUnlocked(QString);
 
 signals:
     void receive(QDocdbLinkObject*);

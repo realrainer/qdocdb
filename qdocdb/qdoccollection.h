@@ -77,8 +77,6 @@ protected:
     QJsonValue getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isSingle);
     QJsonValue getJsonValueByLinkKey(QByteArray linkKey);
 
-    int getSnapshotsValue(QList<QString>& snapshots);
-
 public:
     enum resultEnum {
         success = 0x0,
@@ -138,6 +136,8 @@ public:
     int revertToSnapshot(QString snapshotName);
     int removeSnapshot(QString snapshotName);
     int getModified(QList<QByteArray>& ids);
+
+    int getSnapshotsValue(QList<QString>& snapshots);
     // ---
     // debug
     int printAll();

@@ -58,7 +58,7 @@ bool QDocCollection::iterator::isModifiedLater() {
     for (this->kvit->seek(this->beginKey); (this->kvit->isValid()) && (this->kvit->key().mid(0, this->prefix.size()) == this->prefix) && (isSingle); ) {
         QByteArray key = this->kvit->key();
         if (key.size() > (this->prefix.size() + 1)) {
-            snapshotId = key[key.size() - 1];
+            int snapshotId = key[key.size() - 1];
             if (snapshotId > this->snapshotId) {
                 isSingle = false;
             }
@@ -558,6 +558,15 @@ int QDocCollection::count(QJsonObject query, int &replyCount, QJsonObject option
 
 int QDocCollection::getModified(QList<QByteArray> &ids) {
     ids.clear();
+    QDocCollection::iterator* it = this->newIterator();
+    it->seekToFirst();
+    while (it->isValid()) {
+        if (it->isModifiedLater()) {
+            ids.append(it->key());
+        }
+        it->next();
+    }
+    delete it;
     return QDocCollection::success;
 }
 
@@ -1100,7 +1109,9 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
         }
     }
     if ((!exists) && (this->commonConfig->isUUIDPathValid())) {
-        doc.insert(this->commonConfig->getUUIDPath(), QJsonValue(QString::fromLatin1(this->commonConfig->getIdGen()->getUUID())));
+        if (!doc.contains(this->commonConfig->getUUIDPath())) {
+            doc.insert(this->commonConfig->getUUIDPath(), QJsonValue(QString::fromLatin1(this->commonConfig->getIdGen()->getUUID())));
+        }
     }
     int r = this->putJsonValue(id, QJsonValue(doc));
     if (r != QDocCollection::success) {

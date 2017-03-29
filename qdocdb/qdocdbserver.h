@@ -27,6 +27,7 @@ class QDocdbServer : public QObject {
     QMap<int, QDocCollectionTransaction*> transactions;
     QMap<QString, QDocDatabase*> databases;
     QList<QDocdbLinkBase*> clients;
+    QMap<QString, QDocdbLinkBase*> databaseLocks;
 
     QMap<int, QDocdbLinkBase*> transactionClient;
     QMap<int, QDocdbLinkBase*> observeClient;
@@ -41,6 +42,9 @@ public:
 
     QDocdbServer(QString serverName, QDocdbCommonConfig* commonConfig, QString baseDir = QStandardPaths::writableLocation(QStandardPaths::DataLocation));
     ~QDocdbServer();
+
+signals:
+    void unlocked(QString);
 
 public slots:
     void clientRemoved();

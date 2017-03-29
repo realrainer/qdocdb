@@ -72,9 +72,13 @@ public:
     int revertToSnapshot(QString url, QString snapshot);
     int removeSnapshot(QString url, QString snapshot);
     int getModified(QString url, QVariantList& docIds, QString snapshot = "__CURRENT");
+    int getSnapshotList(QString url, QStringList& snapshotList);
 
     int observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions = QVariantMap(), int preferedId = -1);
     int unobserve(QString url, int observeId);
+
+    int exclusiveLock(QString url);
+    int unlock(QString url);
 
     int connectToServer(QString serverName);
     void disconnectFromServer();

@@ -3,6 +3,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QObject>
+#include <QStringList>
 #include "qdocdbserver.h"
 
 void QDocdbServer::newConnection() {
@@ -11,6 +12,7 @@ void QDocdbServer::newConnection() {
         QDocdbLinkBase* client = new QDocdbLinkBase(socket);
         connect(client, SIGNAL(receive(QDocdbLinkObject*)), this, SLOT(receive(QDocdbLinkObject*)), Qt::DirectConnection);
         connect(client, SIGNAL(clientRemoved()), this, SLOT(clientRemoved()), Qt::DirectConnection);
+        connect(this, SIGNAL(unlocked(QString)), client, SLOT(onUnlocked(QString)), Qt::QueuedConnection);
         clients.append(client);
     }
 }
@@ -41,6 +43,13 @@ void QDocdbServer::clientRemoved() {
             QDocCollectionTransaction* tx = this->transactions[trId];
             delete tx;
             it = this->transactionClient.erase(it);
+        } else {
+            it++;
+        }
+    }
+    for (QMap<QString, QDocdbLinkBase*>::iterator it = this->databaseLocks.begin(); it != this->databaseLocks.end();) {
+        if (it.value() == client) {
+            it = this->databaseLocks.erase(it);
         } else {
             it++;
         }
@@ -84,12 +93,13 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                 }
             }
         }
-        if (collName.isEmpty()) {
-            errorString = "Collection name is empty";
-        }
         db = this->getDatabase(dbName);
         if (db == NULL) {
             errorString = "Can't open database " + dbName;
+        }
+        if ((this->databaseLocks.contains(dbName)) && (this->databaseLocks[dbName] != client)) {
+            client->appendUnlockWait(dbName, linkObject);
+            return;
         }
     }
 
@@ -102,10 +112,16 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
             snapshotName = "__CURRENT";
         }
         QDocCollection* coll = NULL;
-        if (urlNeeded) {
-            coll = db->collection(collName, inMemory);
-            if (coll == NULL) {
-                errorString = "Can't open collection " + collName + " in database " + dbName;
+        if ((urlNeeded) &&
+            (linkObject->getType() != QDocdbLinkObject::typeExclusiveLock) &&
+            (linkObject->getType() != QDocdbLinkObject::typeUnlock)) {
+            if (collName.isEmpty()) {
+                errorString = "Collection name is empty";
+            } else {
+                coll = db->collection(collName, inMemory);
+                if (coll == NULL) {
+                    errorString = "Can't open collection " + collName + " in database " + dbName;
+                }
             }
         }
         if (errorString.isEmpty()) {
@@ -285,6 +301,18 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                 }
                 break;
                 }
+            case QDocdbLinkObject::typeGetSnapshotList: {
+                QStringList snapshotList;
+                int r = coll->getSnapshotsValue(snapshotList);
+                if (r != QDocCollection::success) {
+                    errorString = coll->getLastError();
+                } else {
+                    snapshotList.removeAll("__CURRENT");
+                    replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeGetSnapshotListReply);
+                    replyObject->set("snapshotList", snapshotList);
+                }
+                break;
+            }
             case QDocdbLinkObject::typeNewSnapshot:
             case QDocdbLinkObject::typeRevertToSnapshot:
             case QDocdbLinkObject::typeRemoveSnapshot: {
@@ -341,11 +369,33 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                 }
                 break;
             }
+            case QDocdbLinkObject::typeExclusiveLock: {
+                if ((this->databaseLocks.contains(dbName)) && (this->databaseLocks[dbName] != client)) {
+                    errorString = "database " + dbName + " is already locked";
+                } else {
+                    this->databaseLocks[dbName] = client;
+                }
+                break;
+            }
+            case QDocdbLinkObject::typeUnlock: {
+                if (!this->databaseLocks.contains(dbName)) {
+                    errorString = "database " + dbName + " is not locked";
+                } else {
+                    if (this->databaseLocks[dbName] != client) {
+                        errorString = "You are not owner database " + dbName + " lock";
+                    } else {
+                        this->databaseLocks.remove(dbName);
+                        emit this->unlocked(dbName);
+                    }
+                }
+            }
             default:
                 break;
             }
         }
     }
+    delete linkObject;
+
     if (replyObject == NULL) {
         replyObject = QDocdbLinkObject::newLinkObject(id, QDocdbLinkObject::typeUnknown);
     }
