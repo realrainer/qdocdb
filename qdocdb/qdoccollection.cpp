@@ -609,7 +609,7 @@ int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions, int pre
     observer.triggered = true;
     this->find(query, &observer.reply, queryOptions);
     this->observers[id] = observer;
-    this->emitObserver(id);
+    QMetaObject::invokeMethod(this, "emitObserver", Qt::QueuedConnection, Q_ARG(int, id));
     return id;
 }
 

@@ -34,7 +34,6 @@ class QDocCollection : public QObject {
 
     int getLastSnapshotId(unsigned char &snapshotId);
     QList<QByteArray> findLinkKeys(QJsonObject query, QString curPath, int unionLogic);
-    void emitObserver(int observerId);
 
     QDocCollection(QString collectionDir, QDocdbCommonConfig* commonConfig, bool inMemory = false);
 
@@ -149,6 +148,9 @@ public:
 
 signals:
     void observeQueryChanged(int, QJsonArray&);
+
+public slots:
+    void emitObserver(int observerId);
 };
 
 class QDocCollectionTransaction : public QDocCollection {
