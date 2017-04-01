@@ -28,6 +28,14 @@ class QDocdbClient: public QObject {
 
     QMap<int, QDocdbClient::ObserverInfo> observerInfo;
 
+    typedef struct {
+        int observeId;
+        QJsonArray reply;
+    } ObserveData;
+
+    QQueue<ObserveData> observeData;
+    bool observeDataLock;
+
     QString lastError;
 
     QTimer connectTimer;
@@ -89,12 +97,15 @@ public:
     QDocdbClient();
     ~QDocdbClient();
 
+signals:
+    void observeReplyWaitDone();
+
 public slots:
     void clientRemoved();
     void receive(QDocdbLinkObject*);
     void destroyReply(int id);
 
-    void observeQueryChanged(int observeId, QJsonArray reply);
+    void observeDataProcess();
 
     void onConnectTimer();
 };

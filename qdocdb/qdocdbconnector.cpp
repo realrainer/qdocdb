@@ -56,9 +56,7 @@ void QDocdbConnector::setUrl(QString url) {
             dbClients[serverName] = this->dbClient;
         }
     }
-    if ((!this->_query.isEmpty()) || (this->_allowEmptyQuery)) {
-        this->observe();
-    }
+    this->observe();
     emit this->validChanged();
 }
 
@@ -66,14 +64,6 @@ void QDocdbConnector::setQuery(QJsonObject query) {
     if (this->_query != query) {
         this->unobserve();
         this->_query = query;
-        this->observe();
-    }
-}
-
-void QDocdbConnector::setAllowEmptyQuery(bool allowEmptyQuery) {
-    if (this->_allowEmptyQuery != allowEmptyQuery) {
-        this->unobserve();
-        this->_allowEmptyQuery = allowEmptyQuery;
         this->observe();
     }
 }
@@ -268,16 +258,22 @@ QDocdbConnector::resultEnum QDocdbConnector::removeSnapshot(QString snapshotName
 }
 
 bool QDocdbConnector::valid() {
-    if (this->dbClient == NULL) return false;
+    if ((!this->initComplete) || (this->dbClient == NULL)) return false;
     return (this->dbClient->isConnected()) && (this->urlValid);
+}
+
+void QDocdbConnector::componentComplete() {
+    QQuickItem::componentComplete();
+    this->initComplete = true;
+    this->observe();
 }
 
 QDocdbConnector::QDocdbConnector() {
     this->_value = QJsonArray();
-    this->_allowEmptyQuery = false;
     this->_query = QJsonObject();
     this->observeId = -1;
     this->dbClient = NULL;
+    this->initComplete = false;
 }
 
 QDocdbConnector::~QDocdbConnector() {

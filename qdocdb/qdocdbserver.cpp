@@ -346,7 +346,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                 break;
             }
             case QDocdbLinkObject::typeObserve: {
-                connect(coll, SIGNAL(observeQueryChanged(int,QJsonArray&)), this, SLOT(observeQueryChanged(int,QJsonArray&)), Qt::QueuedConnection);
+                connect(coll, SIGNAL(observeQueryChanged(int,QJsonArray&)), this, SLOT(observeQueryChanged(int,QJsonArray&)), static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
                 int observeId = coll->observe(QJsonObject::fromVariantMap(linkObject->get("query").toMap()),
                                               QJsonObject::fromVariantMap(linkObject->get("queryOptions").toMap()),
                                               linkObject->get("preferedId").toInt());
@@ -363,8 +363,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                         QDocCollection* ocoll = this->observeCollection[observeId];
                         ocoll->unobserve(observeId);
                         this->observeClient.remove(observeId);
-                        this->observeCollection.remove(observeId);
-                        disconnect(ocoll, SIGNAL(observeQueryChanged(int,QJsonArray&)), this, SLOT(observeQueryChanged(int,QJsonArray&)));
+                        this->observeCollection.remove(observeId);                        
                     }
                 }
                 break;

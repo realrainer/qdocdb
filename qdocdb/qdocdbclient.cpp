@@ -277,6 +277,7 @@ int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariant
     dbQuery->set("queryOptions", queryOptions);
     dbQuery->set("preferedId", preferedId);
 
+    this->observeDataLock = true;
     int r = this->sendAndWaitReply(id, dbQuery);
     delete dbQuery;
 
@@ -290,8 +291,11 @@ int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariant
             info.queryOptions = queryOptions;
         }
         this->subs[observeId] = sub;
+        this->observeDataLock = false;
+        QMetaObject::invokeMethod(this, "observeDataProcess", Qt::QueuedConnection);
         return observeId;
     } else {
+        this->observeDataLock = false;
         return -1;
     }
 }
@@ -369,7 +373,8 @@ void QDocdbClient::receive(QDocdbLinkObject* linkObject) {
     if (linkObject->getType() == QDocdbLinkObject::typeObserveData) {
         int observeId = linkObject->get("observeId").toInt();
         QJsonArray reply = QJsonArray::fromVariantList(linkObject->get("reply").toList());
-        QMetaObject::invokeMethod(this, "observeQueryChanged", Qt::QueuedConnection, Q_ARG(int, observeId), Q_ARG(QJsonArray, reply));
+        this->observeData.enqueue(ObserveData({ observeId, reply }));
+        QMetaObject::invokeMethod(this, "observeDataProcess", Qt::QueuedConnection);
         delete linkObject;
         return;
     }
@@ -382,11 +387,15 @@ void QDocdbClient::receive(QDocdbLinkObject* linkObject) {
     }
 }
 
-void QDocdbClient::observeQueryChanged(int observeId, QJsonArray reply) {
-    QMetaObject::invokeMethod(this->subs[observeId], "observeQueryChanged",
-        Qt::DirectConnection,
-        Q_ARG(int, observeId),
-        Q_ARG(QJsonArray, reply));
+void QDocdbClient::observeDataProcess() {
+    if (this->observeDataLock) return;
+    while (this->observeData.size()) {
+        ObserveData data = this->observeData.dequeue();
+        QMetaObject::invokeMethod(this->subs[data.observeId], "observeQueryChanged",
+            Qt::DirectConnection,
+            Q_ARG(int, data.observeId),
+            Q_ARG(QJsonArray, data.reply));
+    }
 }
 
 void QDocdbClient::destroyReply(int id) {
@@ -441,6 +450,7 @@ QDocdbClient::QDocdbClient() {
     this->nextFId = 1;
     this->needConnected = false;
     this->nextConnectWaitTimeout = 1000;
+    this->observeDataLock;
     connect(&this->connectTimer, SIGNAL(timeout()), this, SLOT(onConnectTimer()));
 }
 

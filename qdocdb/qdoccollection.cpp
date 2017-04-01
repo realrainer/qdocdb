@@ -609,7 +609,7 @@ int QDocCollection::observe(QJsonObject query, QJsonObject queryOptions, int pre
     observer.triggered = true;
     this->find(query, &observer.reply, queryOptions);
     this->observers[id] = observer;
-    QMetaObject::invokeMethod(this, "emitObserver", Qt::QueuedConnection, Q_ARG(int, id));
+    emit this->emitObserver(id);
     return id;
 }
 
@@ -1113,7 +1113,7 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
             doc.insert(this->commonConfig->getUUIDPath(), QJsonValue(QString::fromLatin1(this->commonConfig->getIdGen()->getUUID())));
         }
     }
-    int r = this->putJsonValue(id, QJsonValue(doc));
+    int r = this->putJsonValue(id, doc);
     if (r != QDocCollection::success) {
         return r;
     }
@@ -1147,7 +1147,6 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
                 }
             }
             this->applyOptions(&this->observers[observeId].reply, NULL, this->observers[observeId].queryOptions);
-            this->observers[observeId].triggered = true;
         }
     }
     return QDocCollection::success;
@@ -1280,7 +1279,6 @@ int QDocCollectionTransaction::removeById(QByteArray id) {
                     reply.erase(it);
                     deleted = true;
                     this->applyOptions(&this->observers[observeId].reply, NULL, this->observers[observeId].queryOptions);
-                    this->observers[observeId].triggered = true;
                 }
                 it++;
             }
@@ -1295,7 +1293,7 @@ int QDocCollectionTransaction::writeTransaction() {
         return QDocCollectionTransaction::errorWriteTransaction;
     }
     foreach(int observerId, this->observers.keys()) {
-        if (this->observers[observerId].triggered) {
+        if ((*this->baseObservers)[observerId].reply != this->observers[observerId].reply) {
             (*this->baseObservers)[observerId].reply = this->observers[observerId].reply;
             (*this->baseObservers)[observerId].triggered = true;
         }

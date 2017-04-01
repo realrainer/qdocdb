@@ -5,14 +5,16 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QObject>
+#include <QQuickItem>
 
 #include "qdocdbclient.h"
 
-class QDocdbConnector : public QObject {
+class QDocdbConnector : public QQuickItem  {
     Q_OBJECT
     QString _url;
     bool urlValid;
-    bool _allowEmptyQuery;
+    bool initComplete;
+
     QJsonObject _query;
     QJsonObject _queryOptions;
     QJsonArray _value;
@@ -26,7 +28,6 @@ class QDocdbConnector : public QObject {
 public:
     Q_PROPERTY(QString url READ url WRITE setUrl)
     Q_PROPERTY(QJsonObject query READ query WRITE setQuery)
-    Q_PROPERTY(bool allowEmptyQuery READ allowEmptyQuery WRITE setAllowEmptyQuery)
     Q_PROPERTY(QJsonObject queryOptions READ queryOptions WRITE setQueryOptions)
     Q_PROPERTY(QJsonArray value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(QJsonObject valueOne READ valueOne WRITE setValueOne NOTIFY valueOneChanged)
@@ -35,7 +36,6 @@ public:
 
     QString url() { return this->_url; }
     QJsonObject query() { return this->_query; }
-    bool allowEmptyQuery() { return this->_allowEmptyQuery; }
     QJsonObject queryOptions() { return this->_queryOptions; }
     QJsonArray value() { return this->_value; }
     QJsonObject valueOne();
@@ -44,7 +44,6 @@ public:
 
     void setUrl(QString);
     void setQuery(QJsonObject);
-    void setAllowEmptyQuery(bool);
     void setQueryOptions(QJsonObject);
     void setValue(QJsonArray);
     void setValueOne(QJsonObject);
@@ -82,6 +81,9 @@ public:
 
     QDocdbConnector();
     ~QDocdbConnector();
+
+protected:
+    void componentComplete();
 
 signals:
     void valueChanged();
