@@ -4,7 +4,6 @@
 #include <QVariantMap>
 #include <QVariantList>
 #include <QTcpSocket>
-#include <QSignalSpy>
 #include <QMap>
 #include <QQueue>
 
@@ -66,7 +65,6 @@ public:
 
     LinkObjectType getType();
 
-    QSignalSpy* signalSpy;
     bool waitForDone();
 
     QDocdbLinkObject(QVariantMap& fMap);

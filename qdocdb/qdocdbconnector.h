@@ -47,7 +47,6 @@ public:
     void setQueryOptions(QJsonObject);
     void setValue(QJsonArray);
     void setValueOne(QJsonObject);
-
     void setLastError(QString);
 
     enum resultEnum {
@@ -79,6 +78,7 @@ public:
     void observe();
     void unobserve();
 
+    QDocdbConnector(QString url, QJsonObject query, QJsonObject queryOptions);
     QDocdbConnector();
     ~QDocdbConnector();
 

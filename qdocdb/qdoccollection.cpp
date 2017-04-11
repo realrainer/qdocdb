@@ -1081,7 +1081,7 @@ int QDocCollectionTransaction::copyIndexValues(unsigned char dstSnapshotId, unsi
     return QDocCollection::success;
 }
 
-int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool overwrite) {
+int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool overwrite, bool ignoreReadOnlyValue) {
     QJsonObject::iterator i_id = doc.find("_id");
     if (i_id == doc.end()) {
         id = this->commonConfig->getIdGen()->getId();
@@ -1102,7 +1102,7 @@ int QDocCollectionTransaction::insert(QJsonObject doc, QByteArray& id, bool over
             return QDocCollection::errorAlreadyExists;
         }
     }
-    if ((exists) && (this->commonConfig->isReadOnlyKeyValid())) {
+    if ((exists) && (this->commonConfig->isReadOnlyKeyValid()) && (!ignoreReadOnlyValue)) {
         QJsonValue readOnlyValue = QDocUtils::getJsonValueByPath(docOld, this->commonConfig->getReadOnlyKey());
         if ((!readOnlyValue.isUndefined()) && ((readOnlyValue.toBool() == true) || (readOnlyValue.toInt() == 1))) {
             return QDocCollection::errorObjectIsReadOnly;
@@ -1213,13 +1213,20 @@ int QDocCollectionTransaction::remove(QJsonObject& query) {
 }
 
 
-int QDocCollectionTransaction::removeById(QByteArray id) {
+int QDocCollectionTransaction::removeById(QByteArray id, bool ignoreReadOnlyValue) {
     unsigned char snapshotId;
     bool isSingle;
     QJsonValue jsonValue = this->getJsonValue(id, snapshotId, isSingle);
     if (!jsonValue.isObject()) {
         this->lastError = "value is not object";
         return QDocCollection::errorDatabase;
+    }
+
+    if ((this->commonConfig->isReadOnlyKeyValid()) && (!ignoreReadOnlyValue)) {
+        QJsonValue readOnlyValue = QDocUtils::getJsonValueByPath(jsonValue, this->commonConfig->getReadOnlyKey());
+        if ((!readOnlyValue.isUndefined()) && ((readOnlyValue.toBool() == true) || (readOnlyValue.toInt() == 1))) {
+            return QDocCollection::errorObjectIsReadOnly;
+        }
     }
 
     QByteArray linkKey = QDocCollectionTransaction::constructDocumentLinkKey(id, this->snapshotId);

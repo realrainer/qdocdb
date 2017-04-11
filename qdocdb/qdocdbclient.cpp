@@ -181,7 +181,7 @@ int QDocdbClient::discardTransaction(int transactionId) {
     return r;
 }
 
-int QDocdbClient::insert(QString url, QVariantMap doc, QByteArray& docId, bool overwrite, int transactionId) {
+int QDocdbClient::insert(QString url, QVariantMap doc, QByteArray& docId, bool overwrite, bool ignoreReadOnlyValue, int transactionId) {
 
     QDocdbLinkObject* dbQuery;
     int id = this->newLinkObject(QDocdbLinkObject::typeInsert, &dbQuery);
@@ -190,6 +190,7 @@ int QDocdbClient::insert(QString url, QVariantMap doc, QByteArray& docId, bool o
     dbQuery->set("transactionId", transactionId);
     dbQuery->set("document", doc);
     dbQuery->set("overwrite", overwrite);
+    dbQuery->set("ignoreReadOnlyValue", ignoreReadOnlyValue);
 
     int r = this->sendAndWaitReply(id, dbQuery);
     delete dbQuery;
@@ -214,13 +215,14 @@ int QDocdbClient::remove(QString url, QVariantMap query, int transactionId) {
     return r;
 }
 
-int QDocdbClient::removeId(QString url, QByteArray docId, int transactionId) {
+int QDocdbClient::removeId(QString url, QByteArray docId, bool ignoreReadOnlyValue, int transactionId) {
 
     QDocdbLinkObject* dbQuery;
     int id = this->newLinkObject(QDocdbLinkObject::typeRemoveId, &dbQuery);
     dbQuery->set("url", url);
     dbQuery->set("documentId", docId);
     dbQuery->set("transactionId", transactionId);
+    dbQuery->set("ignoreReadOnlyValue", ignoreReadOnlyValue);
 
     int r = this->sendAndWaitReply(id, dbQuery);
     delete dbQuery;
@@ -300,11 +302,10 @@ int QDocdbClient::observe(QObject* sub, QString url, QVariantMap query, QVariant
     }
 }
 
-int QDocdbClient::unobserve(QString url, int observeId) {
+int QDocdbClient::unobserve(int observeId) {
 
     QDocdbLinkObject* dbQuery;
     int id = this->newLinkObject(QDocdbLinkObject::typeUnobserve, &dbQuery);
-    dbQuery->set("url", url);
     dbQuery->set("observeId", observeId);
 
     int r = this->sendAndWaitReply(id, dbQuery);
@@ -317,6 +318,21 @@ int QDocdbClient::unobserve(QString url, int observeId) {
         }
     }
     return r;
+}
+
+void QDocdbClient::subscriberDestroyed(QObject* sub) {
+    QList<int> observeIds;
+    for (QMap<int, QObject*>::iterator it = this->subs.begin(); it != this->subs.end();) {
+        if (it.value() == sub) {
+            observeIds.append(it.key());
+            it = this->subs.erase(it);
+        } else {
+            it++;
+        }
+    }
+    foreach (int observeId, observeIds) {
+        this->unobserve(observeId);
+    }
 }
 
 int QDocdbClient::sendAndWaitReply(int id, QDocdbLinkObject* linkObject) {
@@ -389,7 +405,7 @@ void QDocdbClient::receive(QDocdbLinkObject* linkObject) {
 
 void QDocdbClient::observeDataProcess() {
     if (this->observeDataLock) return;
-    while (this->observeData.size()) {
+    while (this->observeData.count()) {
         ObserveData data = this->observeData.dequeue();
         QMetaObject::invokeMethod(this->subs[data.observeId], "observeQueryChanged",
             Qt::DirectConnection,
@@ -412,12 +428,23 @@ void QDocdbClient::disconnectFromServer() {
     }
 }
 
+void QDocdbClient::cancelAllActiveQueries() {
+    foreach(int id, this->activeQueries.keys()) {
+        if (!this->replies.contains(id)) {
+            this->replies[id] = new QDocdbLinkObject();
+        }
+        this->replies[id]->set("error", "canceled");
+        emit this->activeQueries[id]->done();
+    }
+}
+
 void QDocdbClient::clientRemoved() {
     QDocdbLinkBase* client = (QDocdbLinkBase*)this->sender();
     if (this->client == client) {
         disconnect(this->client, SIGNAL(receive(QDocdbLinkObject*)), this, SLOT(receive(QDocdbLinkObject*)));
         disconnect(this->client, SIGNAL(clientRemoved()), this, SLOT(clientRemoved()));
         this->client = NULL;
+        this->cancelAllActiveQueries();
     }
     this->subs.clear();
 
@@ -459,5 +486,6 @@ QDocdbClient::~QDocdbClient() {
         disconnect(this->client, SIGNAL(receive(QDocdbLinkObject*)), this, SLOT(receive(QDocdbLinkObject*)));
         disconnect(this->client, SIGNAL(clientRemoved()), this, SLOT(clientRemoved()));
         this->client = NULL;
+        this->cancelAllActiveQueries();
     }
 }

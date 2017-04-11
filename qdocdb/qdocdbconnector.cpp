@@ -8,6 +8,7 @@
 
 // database clients singleton
 QMap<QString, QDocdbClient*> dbClients;
+QMap<QDocdbClient*, int> dbClientUses;
 
 void QDocdbConnector::setLastError(QString lastError) {
     if (this->lastError != lastError) {
@@ -42,9 +43,13 @@ void QDocdbConnector::setUrl(QString url) {
     } else {
         this->urlValid = true;
     }
+    if (this->dbClient != NULL) {
+        dbClientUses[this->dbClient]--;
+    }
 
     if (dbClients.contains(serverName)) {
         this->dbClient = dbClients[serverName];
+        dbClientUses[this->dbClient]++;
     } else {
         this->dbClient = new QDocdbClient();
         dbClient->connectToServer(serverName);
@@ -54,9 +59,13 @@ void QDocdbConnector::setUrl(QString url) {
             this->dbClient = NULL;
         } else {
             dbClients[serverName] = this->dbClient;
+            dbClientUses[this->dbClient]++;
         }
     }
-    this->observe();
+    if (this->dbClient != NULL) {
+        connect(this, SIGNAL(destroyed(QObject*)), this->dbClient, SLOT(subscriberDestroyed(QObject*)), static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+        this->observe();
+    }
     emit this->validChanged();
 }
 
@@ -109,7 +118,7 @@ int QDocdbConnector::count(QJsonObject query, QString snapshot) {
 QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc, int transactionId) {
     if (!this->valid()) return QDocdbConnector::error;
     QByteArray docId;
-    int r = dbClient->insert(this->_url, doc.toVariantMap(), docId, transactionId);
+    int r = dbClient->insert(this->_url, doc.toVariantMap(), docId, false, transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
         return QDocdbConnector::error;
@@ -129,7 +138,7 @@ QDocdbConnector::resultEnum QDocdbConnector::remove(QJsonObject query, int trans
 
 QDocdbConnector::resultEnum QDocdbConnector::removeId(QString docId, int transactionId) {
     if (!this->valid()) return QDocdbConnector::error;
-    int r = dbClient->removeId(this->_url, docId.toLocal8Bit(), transactionId);
+    int r = dbClient->removeId(this->_url, docId.toLocal8Bit(), false, transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
         return QDocdbConnector::error;
@@ -205,7 +214,7 @@ void QDocdbConnector::observe() {
 
 void QDocdbConnector::unobserve() {
     if (this->valid()) {
-        dbClient->unobserve(this->_url, this->observeId);
+        dbClient->unobserve(this->observeId);
     }
 }
 
@@ -268,6 +277,13 @@ void QDocdbConnector::componentComplete() {
     this->observe();
 }
 
+QDocdbConnector::QDocdbConnector(QString url, QJsonObject query, QJsonObject queryOptions) : QDocdbConnector()  {
+    this->_query = query;
+    this->_queryOptions = queryOptions;
+    this->initComplete = true;
+    this->setUrl(url);
+}
+
 QDocdbConnector::QDocdbConnector() {
     this->_value = QJsonArray();
     this->_query = QJsonObject();
@@ -277,9 +293,19 @@ QDocdbConnector::QDocdbConnector() {
 }
 
 QDocdbConnector::~QDocdbConnector() {
-    for (QMap<QString, QDocdbClient*>::iterator it = dbClients.begin(); it != dbClients.end();) {
-        QDocdbClient* client = it.value();
-        delete client;
-        it = dbClients.erase(it);
+    if (this->dbClient != NULL) {
+        dbClientUses[this->dbClient]--;
+        if (dbClientUses[this->dbClient] <= 0) {
+            for (QMap<QString, QDocdbClient*>::iterator it = dbClients.begin(); it != dbClients.end();) {
+                QDocdbClient* client = it.value();
+                if (client == this->dbClient) {
+                    it = dbClients.erase(it);
+                } else {
+                    it++;
+                }
+            }
+            dbClientUses.remove(this->dbClient);
+            delete this->dbClient;
+        }
     }
 }

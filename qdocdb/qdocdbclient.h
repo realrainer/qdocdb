@@ -70,9 +70,9 @@ public:
     int writeTransaction(int transactionId);
     int discardTransaction(int transactionId);
 
-    int insert(QString url, QVariantMap doc, QByteArray& docId, bool overwrite = false, int transactionId = -1);
+    int insert(QString url, QVariantMap doc, QByteArray& docId, bool overwrite = false, bool ignoreReadOnlyValue = false, int transactionId = -1);
     int remove(QString url, QVariantMap query, int transactionId = -1);
-    int removeId(QString url, QByteArray docId, int transactionId = -1);
+    int removeId(QString url, QByteArray docId, bool ignoreReadOnlyValue = false, int transactionId = -1);
 
     int set(QString url, QVariantMap query, QVariantList docs, int transactionId = -1);
 
@@ -83,7 +83,7 @@ public:
     int getSnapshotList(QString url, QStringList& snapshotList);
 
     int observe(QObject* sub, QString url, QVariantMap query, QVariantMap queryOptions = QVariantMap(), int preferedId = -1);
-    int unobserve(QString url, int observeId);
+    int unobserve(int observeId);
 
     int exclusiveLock(QString url);
     int unlock(QString url);
@@ -91,6 +91,8 @@ public:
     int connectToServer(QString serverName);
     void disconnectFromServer();
     bool isConnected();
+
+    void cancelAllActiveQueries();
 
     int newLinkObject(QDocdbLinkObject::LinkObjectType, QDocdbLinkObject**);
 
@@ -104,6 +106,7 @@ public slots:
     void clientRemoved();
     void receive(QDocdbLinkObject*);
     void destroyReply(int id);
+    void subscriberDestroyed(QObject*);
 
     void observeDataProcess();
 

@@ -1,4 +1,6 @@
 
+#include <QEventLoop>
+#include <QTimer>
 #include <QDataStream>
 
 #include "qdocdblinkbase.h"
@@ -71,8 +73,8 @@ QDocdbLinkBase::QDocdbLinkBase(QTcpSocket* socket) {
 }
 
 QDocdbLinkBase::~QDocdbLinkBase() {
-    disconnect(this->socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
-    disconnect(this->socket, SIGNAL(disconnected()), this, SLOT(disconnected()));
+    //disconnect(this->socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
+    //disconnect(this->socket, SIGNAL(disconnected()), this, SLOT(disconnected()));
     while (this->unlockWait.count()) {
         delete this->unlockWait.dequeue();
     }
@@ -120,10 +122,17 @@ QVariantMap& QDocdbLinkObject::map() {
 }
 
 bool QDocdbLinkObject::waitForDone() {
-    this->signalSpy = new QSignalSpy(this, SIGNAL(done()));
-    bool ok = this->signalSpy->wait(QDocdbLinkObject::waitForDoneTimeout);
-    delete this->signalSpy;
-    return ok;
+    QTimer timer;
+    timer.setSingleShot(true);
+    QEventLoop loop;
+    connect(this,  SIGNAL(done()), &loop, SLOT(quit()) );
+    connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    timer.setInterval(QDocdbLinkObject::waitForDoneTimeout);
+    timer.start();
+
+    loop.exec();
+
+    return timer.isActive();
 }
 
 void QDocdbLinkObject::assignType() {

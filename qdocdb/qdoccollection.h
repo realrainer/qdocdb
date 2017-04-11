@@ -1,6 +1,7 @@
 #ifndef QDOCCOLLECTION_H
 #define QDOCCOLLECTION_H
 
+#include <QObject>
 #include <QString>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -174,9 +175,9 @@ public:
 
     // API
     int set(QJsonObject& query, QJsonArray& docs);
-    int insert(QJsonObject doc, QByteArray& id, bool overwrite = false);
+    int insert(QJsonObject doc, QByteArray& id, bool overwrite = false, bool ignoreReadOnlyValue = false);
     int remove(QJsonObject& query);
-    int removeById(QByteArray id);
+    int removeById(QByteArray id, bool ignoreReadOnlyValue = false);
     int createIndex(QString fieldName, QString indexName);
     int writeTransaction();
     // ---

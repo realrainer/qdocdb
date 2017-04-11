@@ -17,7 +17,7 @@ QByteArray QDocIdGen::getRandomBytes(int count) {
 QByteArray QDocIdGen::getId() {
     QByteArray id;
     this->counter++;
-    unsigned int tstamp = QDateTime::currentSecsSinceEpoch() & 0xFFFFFFFF;
+    unsigned int tstamp = (QDateTime::currentMSecsSinceEpoch() / 1000) & 0xFFFFFFFF;
     id = QByteArray::number(tstamp, 16);
     id.append(QByteArray::number(this->counter, 16));
     return id;

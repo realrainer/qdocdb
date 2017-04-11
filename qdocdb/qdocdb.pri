@@ -1,6 +1,4 @@
 
-QT += testlib
-
 DEPENDPATH += $$PWD
 SOURCE_DIR = $$PWD
 INCLUDEPATH += $$SOURCE_DIR

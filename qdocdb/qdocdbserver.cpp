@@ -74,7 +74,8 @@ QDocDatabase* QDocdbServer::getDatabase(QString dbName) {
 void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
     QDocdbLinkBase* client = (QDocdbLinkBase*)this->sender();
     bool urlNeeded = ((linkObject->getType() != QDocdbLinkObject::typeWriteTransaction) &&
-                      (linkObject->getType() != QDocdbLinkObject::typeDiscardTransaction));
+                      (linkObject->getType() != QDocdbLinkObject::typeDiscardTransaction) &&
+                      (linkObject->getType() != QDocdbLinkObject::typeUnobserve));
     QString errorString;
     QDocDatabase* db = NULL;
     QString collName;
@@ -243,6 +244,10 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
             case QDocdbLinkObject::typeRemoveId:
             case QDocdbLinkObject::typeSet: {
                 int txId = linkObject->get("transactionId").toInt();
+                bool ignoreReadOnlyValue = false;
+                if (!linkObject->get("ignoreReadOnlyValue").isNull()) {
+                    ignoreReadOnlyValue = linkObject->get("ignoreReadOnlyValue").toBool();
+                }
                 QDocCollectionTransaction* tx = NULL;
                 if (txId == -1) {
                      tx = coll->newTransaction();
@@ -257,7 +262,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                     switch (intType) {
                     case QDocdbLinkObject::typeInsert: {
                         QByteArray docId;
-                        int r = tx->insert(QJsonObject::fromVariantMap(linkObject->get("document").toMap()), docId, linkObject->get("overwrite").toBool());
+                        int r = tx->insert(QJsonObject::fromVariantMap(linkObject->get("document").toMap()), docId, linkObject->get("overwrite").toBool(), ignoreReadOnlyValue);
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         } else {
@@ -275,7 +280,7 @@ void QDocdbServer::receive(QDocdbLinkObject* linkObject) {
                         break;
                     }
                     case QDocdbLinkObject::typeRemoveId: {
-                        int r = tx->removeById(linkObject->get("documentId").toByteArray());
+                        int r = tx->removeById(linkObject->get("documentId").toByteArray(), ignoreReadOnlyValue);
                         if (r != QDocCollection::success) {
                             errorString = tx->getLastError();
                         }
