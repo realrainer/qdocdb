@@ -11,10 +11,10 @@ protected:
     QByteArray getRandomBytes(int);
 public:
     QByteArray getId();
-    QByteArray getUUID();
+    virtual QByteArray getUUID();
     int getNextNumber();
     QDocIdGen();
-    ~QDocIdGen();
+    virtual ~QDocIdGen();
 };
 
 class QDocdbCommonConfig {

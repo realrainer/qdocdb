@@ -85,6 +85,17 @@ void QDocdbConnector::setQueryOptions(QJsonObject queryOptions) {
     }
 }
 
+void QDocdbConnector::setObservable(bool observable) {
+    if (this->_observable != observable) {
+        this->_observable = observable;
+        if (this->_observable) {
+            this->observe();
+        } else {
+            this->unobserve();
+        }
+    }
+}
+
 QVariantList QDocdbConnector::find(QJsonObject query, QString snapshot) {
     if (!this->valid()) return QVariantList();
     QVariantList replyList;
@@ -115,70 +126,70 @@ int QDocdbConnector::count(QJsonObject query, QString snapshot) {
     return reply;
 }
 
-QDocdbConnector::resultEnum QDocdbConnector::insert(QJsonObject doc, int transactionId) {
-    if (!this->valid()) return QDocdbConnector::error;
+QString QDocdbConnector::insert(QJsonObject doc, int transactionId) {
+    if (!this->valid()) return "";
     QByteArray docId;
     int r = dbClient->insert(this->_url, doc.toVariantMap(), docId, false, transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return "";
     }
-    return QDocdbConnector::success;
+    return QString::fromLatin1(docId);
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::remove(QJsonObject query, int transactionId) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->remove(this->_url, query.toVariantMap(), transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeId(QString docId, int transactionId) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->removeId(this->_url, docId.toLocal8Bit(), false, transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 int QDocdbConnector::newTransaction() {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     return dbClient->newTransaction(this->_url);
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::writeTransaction(int transactionId) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->writeTransaction(transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::discardTransaction(int transactionId) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->discardTransaction(transactionId);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeQueryResults() {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->set(this->_url, this->_query.toVariantMap(), QVariantList());
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 void QDocdbConnector::setValue(QJsonArray value) {
@@ -207,7 +218,7 @@ void QDocdbConnector::setValueOne(QJsonObject value) {
 }
 
 void QDocdbConnector::observe() {
-    if (this->valid()) {
+    if ((this->valid()) && (this->_observable)) {
         this->observeId = dbClient->observe(this, this->_url, this->_query.toVariantMap(), this->_queryOptions.toVariantMap());
     }
 }
@@ -227,43 +238,43 @@ void QDocdbConnector::observeQueryChanged(int, QJsonArray& reply) {
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::createIndex(QString field, QString indexName) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->createIndex(this->_url, field, indexName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::newSnapshot(QString snapshotName) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->newSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::revertToSnapshot(QString snapshotName) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->revertToSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 QDocdbConnector::resultEnum QDocdbConnector::removeSnapshot(QString snapshotName) {
-    if (!this->valid()) return QDocdbConnector::error;
+    if (!this->valid()) return QDocdbConnector::Error;
     int r = dbClient->removeSnapshot(this->_url, snapshotName);
     if (r != QDocdbClient::success) {
         this->setLastError(dbClient->getLastError());
-        return QDocdbConnector::error;
+        return QDocdbConnector::Error;
     }
-    return QDocdbConnector::success;
+    return QDocdbConnector::Success;
 }
 
 bool QDocdbConnector::valid() {
@@ -289,6 +300,7 @@ QDocdbConnector::QDocdbConnector() {
     this->_query = QJsonObject();
     this->observeId = -1;
     this->dbClient = NULL;
+    this->_observable = true;
     this->initComplete = false;
 }
 

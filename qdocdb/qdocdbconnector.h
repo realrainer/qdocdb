@@ -18,6 +18,7 @@ class QDocdbConnector : public QQuickItem  {
     QJsonObject _query;
     QJsonObject _queryOptions;
     QJsonArray _value;
+    bool _observable;
 
     QString lastError;
 
@@ -33,12 +34,14 @@ public:
     Q_PROPERTY(QJsonObject valueOne READ valueOne WRITE setValueOne NOTIFY valueOneChanged)
     Q_PROPERTY(bool valid READ valid NOTIFY validChanged)
     Q_PROPERTY(QString err READ err NOTIFY errChanged)
+    Q_PROPERTY(bool observable READ observable WRITE setObservable NOTIFY observableChanged)
 
     QString url() { return this->_url; }
     QJsonObject query() { return this->_query; }
     QJsonObject queryOptions() { return this->_queryOptions; }
     QJsonArray value() { return this->_value; }
     QJsonObject valueOne();
+    bool observable() { return this->_observable; }
     QString err() { return this->lastError; }
     bool valid();
 
@@ -48,17 +51,18 @@ public:
     void setValue(QJsonArray);
     void setValueOne(QJsonObject);
     void setLastError(QString);
+    void setObservable(bool);
 
     enum resultEnum {
-        success,
-        error
+        Success = 0,
+        Error = -1
     };
 
-    Q_ENUM(resultEnum);
+    Q_ENUMS(resultEnum);
 
     Q_INVOKABLE resultEnum removeQueryResults();
 
-    Q_INVOKABLE resultEnum insert(QJsonObject doc, int transactionId = -1);
+    Q_INVOKABLE QString insert(QJsonObject doc, int transactionId = -1);
     Q_INVOKABLE resultEnum remove(QJsonObject query, int transactionId = -1);
     Q_INVOKABLE resultEnum removeId(QString id, int transactionId = -1);
     Q_INVOKABLE resultEnum createIndex(QString field, QString indexName);
@@ -90,6 +94,8 @@ signals:
     void valueOneChanged();
     void errChanged();
     void validChanged();
+    void observableChanged();
+
 public slots:
     void observeQueryChanged(int, QJsonArray&);
 };

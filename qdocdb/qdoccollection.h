@@ -74,7 +74,8 @@ protected:
     int checkValidR(QJsonValue queryPart, QJsonValue docPart, QString curPath, bool& valid);
 
     QJsonValue getJsonValue(QByteArray id);
-    QJsonValue getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isSingle);
+    QJsonValue getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isNotModifiedLater);
+    QJsonValue getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isNotModifiedLater, bool& isNaked);
     QJsonValue getJsonValueByLinkKey(QByteArray linkKey);
 
 public:
@@ -100,7 +101,8 @@ public:
     public:
         QByteArray key();
         QJsonValue value();
-        QJsonValue value(unsigned char& snapshotId, bool& isSingle);
+        QJsonValue value(unsigned char& snapshotId, bool& isNotModifiedLater);
+        QJsonValue value(unsigned char& snapshotId, bool& isNotModifiedLater, bool &isNaked);
         bool isModifiedLater();
         void seekToFirst();
         void seek(QByteArray id);

@@ -23,24 +23,36 @@ QByteArray QDocCollection::iterator::key() {
 
 QJsonValue QDocCollection::iterator::value() {
     unsigned char snapshotId;
-    bool isSingle;
-    return this->value(snapshotId, isSingle);
+    bool isNotModifiedLater;
+    bool isNaked;
+    return this->value(snapshotId, isNotModifiedLater, isNaked);
 }
 
-QJsonValue QDocCollection::iterator::value(unsigned char& snapshotId, bool& isSingle) {
+QJsonValue QDocCollection::iterator::value(unsigned char &snapshotId, bool &isNotModifiedLater) {
+    bool isNaked;
+    return this->value(snapshotId, isNotModifiedLater, isNaked);
+}
+
+QJsonValue QDocCollection::iterator::value(unsigned char& snapshotId, bool& isNotModifiedLater, bool &isNaked) {
     QByteArray valueData;
 
     bool find = false;
-    isSingle = true;
+    isNotModifiedLater = true;
+    isNaked = true;
     for (this->kvit->seek(this->beginKey); (this->kvit->isValid()) && (this->kvit->key().mid(0, this->prefix.size()) == this->prefix) && (!find); ) {
         QByteArray key = this->kvit->key();
         if (key.size() > (this->prefix.size() + 1)) {
             snapshotId = key[key.size() - 1];
-            if (snapshotId <= this->snapshotId) {
+            if (snapshotId < this->snapshotId) {
                 valueData = this->kvit->value();
-                find = snapshotId == this->snapshotId;
+                isNaked = false;
+            } else
+            if (snapshotId == this->snapshotId) {
+                valueData = this->kvit->value();
+                find = true;
             } else {
-                isSingle = false;
+                isNotModifiedLater = false;
+                isNaked = false;
             }
         }
         this->kvit->next();
@@ -53,19 +65,19 @@ QJsonValue QDocCollection::iterator::value(unsigned char& snapshotId, bool& isSi
 }
 
 bool QDocCollection::iterator::isModifiedLater() {
-    bool isSingle = true;
+    bool isNotModifiedLater = true;
 
-    for (this->kvit->seek(this->beginKey); (this->kvit->isValid()) && (this->kvit->key().mid(0, this->prefix.size()) == this->prefix) && (isSingle); ) {
+    for (this->kvit->seek(this->beginKey); (this->kvit->isValid()) && (this->kvit->key().mid(0, this->prefix.size()) == this->prefix) && (isNotModifiedLater); ) {
         QByteArray key = this->kvit->key();
         if (key.size() > (this->prefix.size() + 1)) {
             int snapshotId = key[key.size() - 1];
             if (snapshotId > this->snapshotId) {
-                isSingle = false;
+                isNotModifiedLater = false;
             }
         }
         this->kvit->next();
     }
-    return !isSingle;
+    return !isNotModifiedLater;
 }
 
 void QDocCollection::iterator::setupPrefix() {
@@ -175,14 +187,26 @@ QJsonValue QDocCollection::getJsonValue(QByteArray id) {
     return value;
 }
 
-QJsonValue QDocCollection::getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isSingle) {
+QJsonValue QDocCollection::getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isNotModifiedLater) {
     QDocCollection::iterator* it = this->newIterator();
     it->seek(id);
     if (!it->isValid()) {
         delete it;
         return QJsonValue(QJsonValue::Undefined);
     }
-    QJsonValue value = it->value(snapshotId, isSingle);
+    QJsonValue value = it->value(snapshotId, isNotModifiedLater);
+    delete it;
+    return value;
+}
+
+QJsonValue QDocCollection::getJsonValue(QByteArray id, unsigned char& snapshotId, bool& isNotModifiedLater, bool& isNaked) {
+    QDocCollection::iterator* it = this->newIterator();
+    it->seek(id);
+    if (!it->isValid()) {
+        delete it;
+        return QJsonValue(QJsonValue::Undefined);
+    }
+    QJsonValue value = it->value(snapshotId, isNotModifiedLater, isNaked);
     delete it;
     return value;
 }
@@ -913,7 +937,6 @@ QDocCollection::QDocCollection(QString collectionDir, QDocdbCommonConfig* common
     } else {
         this->lastError = this->kvdb->getLastError();
     }
-    //...
     //this->printAll();
 }
 
@@ -1215,8 +1238,9 @@ int QDocCollectionTransaction::remove(QJsonObject& query) {
 
 int QDocCollectionTransaction::removeById(QByteArray id, bool ignoreReadOnlyValue) {
     unsigned char snapshotId;
-    bool isSingle;
-    QJsonValue jsonValue = this->getJsonValue(id, snapshotId, isSingle);
+    bool isNotModifiedLater;
+    bool isNaked;
+    QJsonValue jsonValue = this->getJsonValue(id, snapshotId, isNotModifiedLater, isNaked);
     if (!jsonValue.isObject()) {
         this->lastError = "value is not object";
         return QDocCollection::errorDatabase;
@@ -1231,19 +1255,19 @@ int QDocCollectionTransaction::removeById(QByteArray id, bool ignoreReadOnlyValu
 
     QByteArray linkKey = QDocCollectionTransaction::constructDocumentLinkKey(id, this->snapshotId);
 
-    if (snapshotId == this->snapshotId) {
+    if ((snapshotId != this->snapshotId) || (!isNaked)) {
+        int r = this->kvdb->putValue(linkKey, QDocSerialize::marshal(QJsonValue::Undefined));
+        if (r != QDocKVInterface::success) {
+            return r;
+        }
+    } else {
         int r = this->kvdb->deleteValue(linkKey);
-        if ((r == QDocKVInterface::success) && (isSingle)) {
+        if (r == QDocKVInterface::success) {
             r = this->kvdb->deleteValue(this->constructDocumentStartKey(id));
         }
         if (r != QDocKVInterface::success) {
             this->lastError = this->kvdb->getLastError();
             return QDocCollection::errorDatabase;
-        }
-    } else {
-        int r = this->kvdb->putValue(linkKey, QDocSerialize::marshal(QJsonValue::Undefined));
-        if (r != QDocKVInterface::success) {
-            return r;
         }
     }
 
